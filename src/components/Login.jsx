@@ -19,8 +19,9 @@ export default function Login() {
     if (!email.trim() || !password) return;
     setStatus("busy");
     setMsg("");
-    const fn = mode === "signin" ? supabase.auth.signInWithPassword : supabase.auth.signUp;
-    const { error } = await fn({ email: email.trim(), password });
+    const { error } = mode === "signin"
+      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      : await supabase.auth.signUp({ email: email.trim(), password });
     if (error) {
       setStatus("error");
       setMsg(error.message);
