@@ -256,7 +256,7 @@ export default function Dashboard({ user, onSignOut }) {
 
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(65% 45% at 50% -8%, rgba(74,222,128,0.10), transparent 60%), ${C.bg}`, color: C.text, fontFamily: FONT, paddingBottom: 92 }}>
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "18px 14px 0" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "calc(18px + env(safe-area-inset-top)) 14px 0" }}>
         {err && (
           <div style={{ ...card({ border: `1px solid ${C.red}`, marginBottom: 12, padding: 12 }), display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <span style={{ color: C.red, fontSize: 13, flex: 1 }}>{err}</span>
@@ -297,6 +297,14 @@ function Home({ data, up, open }) {
   const [editH, setEditH] = useState(false);
   const [newH, setNewH] = useState("");
   const addHabit = () => { if (!newH.trim()) return; up((d) => { d.habits.list.push({ id: "h" + Date.now(), name: newH.trim() }); return d; }); setNewH(""); };
+  const moveHabit = (id, dir) => up((d) => {
+    const list = d.habits.list;
+    const i2 = list.findIndex((x) => x.id === id);
+    const j = i2 + dir;
+    if (i2 < 0 || j < 0 || j >= list.length) return d;
+    [list[i2], list[j]] = [list[j], list[i2]];
+    return d;
+  });
 
   const Tile = ({ id, icon, title, sub, children }) => (
     <div onClick={() => open(id)} style={card({ padding: 14, cursor: "pointer" })}>
@@ -389,6 +397,10 @@ function Home({ data, up, open }) {
             <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 8px", borderBottom: i < data.habits.list.length - 1 || editH ? `1px solid ${C.border}` : "none" }}>
               {editH ? (
                 <>
+                  <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <button disabled={i === 0} style={{ border: "none", background: "transparent", color: i === 0 ? C.faint : C.sub, cursor: i === 0 ? "default" : "pointer", fontSize: 13, padding: "0 4px", lineHeight: 1 }} onClick={() => moveHabit(h.id, -1)}>▲</button>
+                    <button disabled={i === data.habits.list.length - 1} style={{ border: "none", background: "transparent", color: i === data.habits.list.length - 1 ? C.faint : C.sub, cursor: i === data.habits.list.length - 1 ? "default" : "pointer", fontSize: 13, padding: "0 4px", lineHeight: 1 }} onClick={() => moveHabit(h.id, 1)}>▼</button>
+                  </span>
                   <input style={{ ...input, flex: 1, padding: "8px 10px", fontSize: 14 }} value={h.name} onChange={(e) => up((d) => { const x = d.habits.list.find((y) => y.id === h.id); if (x) x.name = e.target.value; return d; })} />
                   <button style={{ border: "none", background: "transparent", color: C.red, cursor: "pointer", fontSize: 15, padding: "0 6px" }} onClick={() => up((d) => { d.habits.list = d.habits.list.filter((x) => x.id !== h.id); return d; })}>✕</button>
                 </>
@@ -412,7 +424,7 @@ function Home({ data, up, open }) {
           </div>
         )}
       </div>
-      <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px" }}>{editH ? "Umbenennen behält die Streak. Löschen entfernt die Gewohnheit dauerhaft." : isPast ? `Du hakst gerade für ${viewKey.slice(8, 10)}.${viewKey.slice(5, 7)}. ab – Streaks aktualisieren sich automatisch.` : "Jede Gewohnheit hat ihre eigene Streak. Antippen = heute erledigt."}</p>
+      <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px" }}>{editH ? "▲▼ verschiebt die Reihenfolge. Umbenennen behält die Streak. Löschen entfernt die Gewohnheit dauerhaft." : isPast ? `Du hakst gerade für ${viewKey.slice(8, 10)}.${viewKey.slice(5, 7)}. ab – Streaks aktualisieren sich automatisch.` : "Jede Gewohnheit hat ihre eigene Streak. Antippen = heute erledigt."}</p>
     </>
   );
 }
