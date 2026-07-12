@@ -8,38 +8,26 @@ const inputStyle = { width: "100%", boxSizing: "border-box", background: "rgba(2
 const buttonStyle = (disabled) => ({ border: "none", cursor: disabled ? "default" : "pointer", borderRadius: 999, padding: "12px 15px", fontSize: 14.5, fontWeight: 700, fontFamily: FONT, color: "#04110A", background: C.green, opacity: disabled ? 0.6 : 1, boxShadow: "0 0 16px rgba(74,222,128,0.32)" });
 
 export default function Login() {
-  const [step, setStep] = useState("email"); // email | code
+  const [mode, setMode] = useState("signin"); // signin | signup
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | sending | error
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | busy | error
   const [msg, setMsg] = useState("");
 
-  const sendCode = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    setStatus("sending");
+    if (!email.trim() || !password) return;
+    setStatus("busy");
     setMsg("");
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim() });
+    const fn = mode === "signin" ? supabase.auth.signInWithPassword : supabase.auth.signUp;
+    const { error } = await fn({ email: email.trim(), password });
     if (error) {
       setStatus("error");
       setMsg(error.message);
-    } else {
-      setStatus("idle");
-      setStep("code");
-    }
-  };
-
-  const verifyCode = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    setStatus("sending");
-    setMsg("");
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
-    if (error) {
-      setStatus("error");
-      setMsg("Code falsch oder abgelaufen. Neuen Code anfordern und nochmal probieren.");
+      return;
     }
     // bei Erfolg übernimmt App.jsx über onAuthStateChange automatisch
+    setStatus("idle");
   };
 
   return (
@@ -48,59 +36,40 @@ export default function Login() {
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 6, textAlign: "center" }}>
           Daily Life Dash <span style={{ color: C.green }}>●</span>
         </h1>
-
-        {step === "email" && (
-          <>
-            <p style={{ fontSize: 13, color: C.sub, textAlign: "center", margin: "0 0 24px" }}>
-              Login per Code — kein Passwort nötig.
-            </p>
-            <form onSubmit={sendCode} style={{ display: "grid", gap: 10 }}>
-              <input
-                type="email"
-                required
-                autoFocus
-                placeholder="deine@email.de"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
-              />
-              <button type="submit" disabled={status === "sending"} style={buttonStyle(status === "sending")}>
-                {status === "sending" ? "Wird verschickt…" : "Code senden"}
-              </button>
-              {status === "error" && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{msg}</p>}
-            </form>
-          </>
-        )}
-
-        {step === "code" && (
-          <>
-            <p style={{ fontSize: 13, color: C.sub, textAlign: "center", margin: "0 0 24px" }}>
-              Code an <b>{email}</b> geschickt. Trag ihn hier ein.
-            </p>
-            <form onSubmit={verifyCode} style={{ display: "grid", gap: 10 }}>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoFocus
-                placeholder="6-stelliger Code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                style={{ ...inputStyle, textAlign: "center", fontSize: 22, letterSpacing: "0.3em", fontFamily: "ui-monospace, monospace" }}
-              />
-              <button type="submit" disabled={status === "sending"} style={buttonStyle(status === "sending")}>
-                {status === "sending" ? "Prüfe…" : "Bestätigen"}
-              </button>
-              {status === "error" && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{msg}</p>}
-              <button
-                type="button"
-                onClick={() => { setStep("email"); setCode(""); setStatus("idle"); setMsg(""); }}
-                style={{ border: "none", background: "transparent", color: C.sub, cursor: "pointer", fontSize: 12.5, padding: "4px 0" }}
-              >
-                ‹ andere E-Mail-Adresse / neuen Code anfordern
-              </button>
-            </form>
-          </>
-        )}
+        <p style={{ fontSize: 13, color: C.sub, textAlign: "center", margin: "0 0 24px" }}>
+          {mode === "signin" ? "Mit E-Mail und Passwort einloggen." : "Neuen Account anlegen."}
+        </p>
+        <form onSubmit={submit} style={{ display: "grid", gap: 10 }}>
+          <input
+            type="email"
+            required
+            autoFocus
+            placeholder="deine@email.de"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={inputStyle}
+          />
+          <input
+            type="password"
+            required
+            minLength={6}
+            placeholder="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={inputStyle}
+          />
+          <button type="submit" disabled={status === "busy"} style={buttonStyle(status === "busy")}>
+            {status === "busy" ? "Einen Moment…" : mode === "signin" ? "Einloggen" : "Account anlegen"}
+          </button>
+          {status === "error" && <p style={{ color: C.red, fontSize: 13, margin: 0 }}>{msg}</p>}
+          <button
+            type="button"
+            onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setStatus("idle"); setMsg(""); }}
+            style={{ border: "none", background: "transparent", color: C.sub, cursor: "pointer", fontSize: 12.5, padding: "4px 0" }}
+          >
+            {mode === "signin" ? "Noch keinen Account? Registrieren" : "‹ Schon einen Account? Einloggen"}
+          </button>
+        </form>
       </div>
     </div>
   );
