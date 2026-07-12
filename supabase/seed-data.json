@@ -1,0 +1,72 @@
+{
+  "_comment": "Dies ist Nicolas' echter Datenstand, Stand Juli 2026. Claude Code: diesen Datensatz beim ersten Login in die Supabase-Tabelle schreiben (siehe CLAUDE.md, Schritt Migration). Struktur entspricht exakt dem State-Objekt der App.",
+  "finance": {
+    "goal": 20000,
+    "entries": [
+      { "id": 1, "month": "2026-01", "amount": 1150 },
+      { "id": 2, "month": "2026-01", "amount": 739, "note": "Einmalig andere Plattform" },
+      { "id": 3, "month": "2026-02", "amount": 1105 },
+      { "id": 4, "month": "2026-03", "amount": 1101 },
+      { "id": 5, "month": "2026-04", "amount": 1150 },
+      { "id": 6, "month": "2026-05", "amount": 1200 },
+      { "id": 7, "month": "2026-06", "amount": 1300 }
+    ],
+    "netWorthHistory": []
+  },
+  "sales": { "cert": false, "courseName": "Sales-Kurs abschließen", "oppTarget": 3, "oppCount": 1, "quota": false },
+  "fitness": {
+    "strands": [
+      { "id": "pull", "name": "Klimmzüge", "milestones": [5, 10, 20], "current": 0 },
+      { "id": "dip", "name": "Dips", "milestones": [5, 10, 15], "current": 0 },
+      { "id": "push", "name": "Liegestütze", "milestones": [10, 20, 30, 40, 50], "current": 0 }
+    ],
+    "muscleUp": false,
+    "weight": { "entries": [] }
+  },
+  "training": {
+    "categories": [
+      { "id": "workout", "name": "Workout" },
+      { "id": "basketball", "name": "Basketball" },
+      { "id": "stretch", "name": "Stretching" }
+    ],
+    "templates": [
+      { "id": "t_workout", "catId": "workout", "name": "Standard Workout", "items": [
+        { "name": "Klimmzüge", "sets": 3 },
+        { "name": "Dips", "sets": 3 },
+        { "name": "Reverse Rows", "sets": 3 },
+        { "name": "Liegestütze", "sets": 3 },
+        { "name": "Seitheben (Kettlebell)", "sets": 3 },
+        { "name": "Knieheben (Bauch)", "sets": 2 }
+      ] },
+      { "id": "t_shoot", "catId": "basketball", "name": "Shooting Drill", "items": [] },
+      { "id": "t_stretch", "catId": "stretch", "name": "Stretching-Session", "items": [] }
+    ],
+    "sessions": [
+      { "id": 1751866400001, "date": "2026-07-07", "catId": "basketball", "items": [], "duration": null, "note": "" },
+      { "id": 1751952800002, "date": "2026-07-08", "catId": "basketball", "items": [], "duration": null, "note": "" },
+      { "id": 1752039200003, "date": "2026-07-09", "catId": "basketball", "items": [], "duration": null, "note": "" },
+      { "id": 1752125600004, "date": "2026-07-10", "catId": "basketball", "items": [], "duration": null, "note": "" }
+    ]
+  },
+  "chess": { "elo": 1028, "eloTarget": 1500, "puzzle": 1537, "puzzleTarget": 1700, "opening": false, "history": [{ "date": "2026-07-10", "elo": 1028, "puzzle": 1537 }] },
+  "habits": {
+    "list": [
+      { "id": "mag", "name": "Magnesium (2 Tabletten)" },
+      { "id": "kopf", "name": "Kopfmassage" },
+      { "id": "puzzle", "name": "Chess Puzzles" },
+      { "id": "move", "name": "Training / Stretching" },
+      { "id": "read", "name": "30 Min lesen / lernen" },
+      { "id": "social", "name": "Social Media begrenzen" }
+    ],
+    "checks": {}
+  },
+  "tasks": { "daily": [], "weekly": [], "monthly": [], "checks": { "daily": {}, "weekly": {}, "monthly": {} } },
+  "achievements": {
+    "ultimate": { "title": "Net Worth 100.000 €", "target": "100000" },
+    "items": [
+      { "id": 2, "title": "Erste Quota gehittet", "target": "", "done": false },
+      { "id": 3, "title": "Erster Muscle Up", "target": "", "done": false }
+    ]
+  },
+  "income": { "target": 10000, "entries": [] }
+}

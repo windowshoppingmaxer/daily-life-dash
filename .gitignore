@@ -1,0 +1,14 @@
+# Secrets — NIEMALS committen
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build-Output
+dist/
+
+# System
+.DS_Store
+*.log
