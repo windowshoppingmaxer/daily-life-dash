@@ -71,6 +71,59 @@ const seed = {
     { id: 3, title: "Erster Muscle Up", target: "", done: false },
   ] },
   income: { target: 10000, entries: [] },
+  food: {
+    target: { kcal: 2200, protein: 145, fat: 65, carbs: 255 },
+    categories: [
+      { id: "breakfast", name: "Frühstück" },
+      { id: "lunch", name: "Mittagessen" },
+      { id: "dinner", name: "Abendessen" },
+      { id: "snack", name: "Snacks" },
+      { id: "other", name: "Sonstiges" },
+    ],
+    meals: [
+      // Prep-Meals: identische Werte für Mittag & Abend hinterlegt, da austauschbar genutzt
+      { id: "pm1_l500", catId: "lunch", name: "Käsespätzle mit Hähnchen (500g)", kcal: 690, protein: 55, fat: 21, carbs: 70 },
+      { id: "pm1_l1000", catId: "lunch", name: "Käsespätzle mit Hähnchen (1kg)", kcal: 1380, protein: 109, fat: 41, carbs: 140 },
+      { id: "pm1_d500", catId: "dinner", name: "Käsespätzle mit Hähnchen (500g)", kcal: 690, protein: 55, fat: 21, carbs: 70 },
+      { id: "pm1_d1000", catId: "dinner", name: "Käsespätzle mit Hähnchen (1kg)", kcal: 1380, protein: 109, fat: 41, carbs: 140 },
+
+      { id: "pm2_l500", catId: "lunch", name: "Buffalo-Style Hähnchenbowl (500g)", kcal: 460, protein: 41, fat: 11, carbs: 43 },
+      { id: "pm2_l1000", catId: "lunch", name: "Buffalo-Style Hähnchenbowl (1kg)", kcal: 920, protein: 82, fat: 22, carbs: 86 },
+      { id: "pm2_d500", catId: "dinner", name: "Buffalo-Style Hähnchenbowl (500g)", kcal: 460, protein: 41, fat: 11, carbs: 43 },
+      { id: "pm2_d1000", catId: "dinner", name: "Buffalo-Style Hähnchenbowl (1kg)", kcal: 920, protein: 82, fat: 22, carbs: 86 },
+
+      { id: "pm3_l500", catId: "lunch", name: "Ofenkartoffeln mit Hähnchen (500g)", kcal: 410, protein: 43, fat: 8, carbs: 40 },
+      { id: "pm3_l1000", catId: "lunch", name: "Ofenkartoffeln mit Hähnchen (1kg)", kcal: 820, protein: 85, fat: 15, carbs: 80 },
+      { id: "pm3_d500", catId: "dinner", name: "Ofenkartoffeln mit Hähnchen (500g)", kcal: 410, protein: 43, fat: 8, carbs: 40 },
+      { id: "pm3_d1000", catId: "dinner", name: "Ofenkartoffeln mit Hähnchen (1kg)", kcal: 820, protein: 85, fat: 15, carbs: 80 },
+
+      { id: "pm4_l500", catId: "lunch", name: "Protein Pasta Alfredo (500g)", kcal: 580, protein: 60, fat: 10, carbs: 60 },
+      { id: "pm4_l1000", catId: "lunch", name: "Protein Pasta Alfredo (1kg)", kcal: 1160, protein: 120, fat: 19, carbs: 120 },
+      { id: "pm4_d500", catId: "dinner", name: "Protein Pasta Alfredo (500g)", kcal: 580, protein: 60, fat: 10, carbs: 60 },
+      { id: "pm4_d1000", catId: "dinner", name: "Protein Pasta Alfredo (1kg)", kcal: 1160, protein: 120, fat: 19, carbs: 120 },
+
+      { id: "pm5_l500", catId: "lunch", name: "Protein Pasta Al Salmone (500g)", kcal: 569, protein: 47, fat: 8, carbs: 73 },
+      { id: "pm5_l1000", catId: "lunch", name: "Protein Pasta Al Salmone (1kg)", kcal: 1138, protein: 94, fat: 15, carbs: 146 },
+      { id: "pm5_d500", catId: "dinner", name: "Protein Pasta Al Salmone (500g)", kcal: 569, protein: 47, fat: 8, carbs: 73 },
+      { id: "pm5_d1000", catId: "dinner", name: "Protein Pasta Al Salmone (1kg)", kcal: 1138, protein: 94, fat: 15, carbs: 146 },
+
+      { id: "pm6_l500", catId: "lunch", name: "Chili con Carne (500g)", kcal: 601, protein: 35, fat: 23, carbs: 58 },
+      { id: "pm6_l1000", catId: "lunch", name: "Chili con Carne (1kg)", kcal: 1202, protein: 70, fat: 46, carbs: 116 },
+      { id: "pm6_d500", catId: "dinner", name: "Chili con Carne (500g)", kcal: 601, protein: 35, fat: 23, carbs: 58 },
+      { id: "pm6_d1000", catId: "dinner", name: "Chili con Carne (1kg)", kcal: 1202, protein: 70, fat: 46, carbs: 116 },
+
+      { id: "pm7_l500", catId: "lunch", name: "Hähnchen, Reis, Brokkoli (500g)", kcal: 455, protein: 42, fat: 5, carbs: 59 },
+      { id: "pm7_l1000", catId: "lunch", name: "Hähnchen, Reis, Brokkoli (1kg)", kcal: 910, protein: 83, fat: 9, carbs: 118 },
+      { id: "pm7_d500", catId: "dinner", name: "Hähnchen, Reis, Brokkoli (500g)", kcal: 455, protein: 42, fat: 5, carbs: 59 },
+      { id: "pm7_d1000", catId: "dinner", name: "Hähnchen, Reis, Brokkoli (1kg)", kcal: 910, protein: 83, fat: 9, carbs: 118 },
+
+      { id: "pm8_l500", catId: "lunch", name: "Protein Pasta Bolognese (500g)", kcal: 630, protein: 43, fat: 16, carbs: 75 },
+      { id: "pm8_l1000", catId: "lunch", name: "Protein Pasta Bolognese (1kg)", kcal: 1260, protein: 86, fat: 32, carbs: 150 },
+      { id: "pm8_d500", catId: "dinner", name: "Protein Pasta Bolognese (500g)", kcal: 630, protein: 43, fat: 16, carbs: 75 },
+      { id: "pm8_d1000", catId: "dinner", name: "Protein Pasta Bolognese (1kg)", kcal: 1260, protein: 86, fat: 32, carbs: 150 },
+    ],
+    entries: [],
+  },
 };
 
 // ---------- Laden & Mergen ----------
@@ -89,6 +142,13 @@ function mergeData(p) {
       items: ((p.achievements && p.achievements.items) || seed.achievements.items).filter((x) => x.title !== "10k investiert"),
     },
     income: { ...seed.income, ...p.income },
+    food: {
+      ...seed.food, ...(p.food || {}),
+      target: { ...seed.food.target, ...((p.food && p.food.target) || {}) },
+      categories: (p.food && p.food.categories) || seed.food.categories,
+      meals: (p.food && p.food.meals) || seed.food.meals,
+      entries: (p.food && p.food.entries) || [],
+    },
   };
 }
 
@@ -252,7 +312,7 @@ export default function Dashboard({ user, onSignOut }) {
   if (!data) return <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontFamily: FONT, ...glow }}>Systeme laden…</div>;
 
   const inAreas = ["geld", "sales", "fitness", "chess"].includes(nav);
-  const tabs = [{ id: "home", l: "Home" }, { id: "training", l: "Training" }, { id: "ach", l: "Erfolge" }];
+  const tabs = [{ id: "home", l: "Home" }, { id: "training", l: "Training" }, { id: "food", l: "Essen" }, { id: "ach", l: "Erfolge" }];
 
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(65% 45% at 50% -8%, rgba(74,222,128,0.10), transparent 60%), ${C.bg}`, color: C.text, fontFamily: FONT, paddingBottom: 92 }}>
@@ -269,6 +329,7 @@ export default function Dashboard({ user, onSignOut }) {
         {nav === "fitness" && <Fitness data={data} up={up} back={() => setNav("home")} />}
         {nav === "chess" && <ChessView data={data} up={up} back={() => setNav("home")} />}
         {nav === "training" && <Training data={data} up={up} />}
+        {nav === "food" && <Food data={data} up={up} />}
         {nav === "ach" && <Achievements data={data} up={up} doImport={doImport} onSignOut={onSignOut} userEmail={user.email} />}
       </div>
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "8px 12px calc(12px + env(safe-area-inset-bottom))", background: "rgba(5,10,7,0.75)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderTop: `1px solid ${C.border}` }}>
@@ -1095,6 +1156,181 @@ function Training({ data, up }) {
             ); })}
           </div>
         </>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+function Food({ data, up }) {
+  const fd = data.food;
+  const cats = fd.categories;
+  const [dayOff, setDayOff] = useState(0);
+  const viewDateObj = (() => { const d = new Date(); d.setDate(d.getDate() + dayOff); return d; })();
+  const viewKey = keyOf(viewDateObj);
+  const isPast = dayOff < 0;
+  const dateStr = viewDateObj.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+
+  const [openCat, setOpenCat] = useState(null);
+  const [custom, setCustom] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+  const [editT, setEditT] = useState(false);
+  const [tgt, setTgt] = useState(fd.target);
+  const [editLib, setEditLib] = useState(false);
+  const [libCat, setLibCat] = useState(cats[0] ? cats[0].id : "");
+  const [newMeal, setNewMeal] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+
+  const todays = fd.entries.filter((e) => e.date === viewKey);
+  const sum = (key) => todays.reduce((a, e) => a + (Number(e[key]) || 0), 0);
+  const eaten = { kcal: sum("kcal"), protein: sum("protein"), fat: sum("fat"), carbs: sum("carbs") };
+  const remaining = Math.max(0, fd.target.kcal - eaten.kcal);
+
+  const logMeal = (m, catId) => { up((d) => { d.food.entries.push({ id: Date.now(), date: viewKey, catId, mealId: m.id, name: m.name, kcal: m.kcal, protein: m.protein, fat: m.fat, carbs: m.carbs }); return d; }); };
+  const logCustom = (catId) => {
+    const kcal = Number(custom.kcal) || 0, protein = Number(custom.protein) || 0, fat = Number(custom.fat) || 0, carbs = Number(custom.carbs) || 0;
+    if (!custom.name.trim() && !kcal) return;
+    up((d) => { d.food.entries.push({ id: Date.now(), date: viewKey, catId, mealId: null, name: custom.name.trim() || "Eigener Eintrag", kcal, protein, fat, carbs }); return d; });
+    setCustom({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+    setOpenCat(null);
+  };
+  const removeEntry = (id) => up((d) => { d.food.entries = d.food.entries.filter((e) => e.id !== id); return d; });
+  const saveTarget = () => { up((d) => { d.food.target = { kcal: Number(tgt.kcal) || 0, protein: Number(tgt.protein) || 0, fat: Number(tgt.fat) || 0, carbs: Number(tgt.carbs) || 0 }; return d; }); setEditT(false); };
+  const addMeal = () => {
+    if (!newMeal.name.trim() || !libCat) return;
+    up((d) => { d.food.meals.push({ id: "fm" + Date.now(), catId: libCat, name: newMeal.name.trim(), kcal: Number(newMeal.kcal) || 0, protein: Number(newMeal.protein) || 0, fat: Number(newMeal.fat) || 0, carbs: Number(newMeal.carbs) || 0 }); return d; });
+    setNewMeal({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+  };
+  const removeMeal = (id) => up((d) => { d.food.meals = d.food.meals.filter((m) => m.id !== id); return d; });
+
+  const MacroBar = ({ label, val, target, color }) => (
+    <div style={card({ padding: 12 })}>
+      <div style={{ fontSize: 11.5, color: C.sub }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 800, margin: "3px 0 8px", ...num }}>{Math.round(val)}<span style={{ fontSize: 11, color: C.faint }}>/{Math.round(target)}g</span></div>
+      <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+        <div style={{ width: `${Math.min(100, (val / (target || 1)) * 100)}%`, height: "100%", background: color, borderRadius: 999, transition: "width 0.5s ease" }} />
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 2px 0" }}>
+        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14 }} onClick={() => setDayOff(dayOff - 1)}>‹</button>
+        <span style={{ color: isPast ? C.flame : C.sub, fontSize: 13, textTransform: "capitalize", fontWeight: isPast ? 700 : 400 }}>{dateStr}</span>
+        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14, opacity: dayOff === 0 ? 0.35 : 1, cursor: dayOff === 0 ? "default" : "pointer" }} disabled={dayOff === 0} onClick={() => setDayOff(Math.min(0, dayOff + 1))}>›</button>
+        {isPast && <button style={{ ...btn(true), padding: "3px 11px", fontSize: 11.5 }} onClick={() => setDayOff(0)}>Heute</button>}
+      </div>
+      <H1>🍽️ Essen</H1>
+
+      <div style={hiCard({ marginBottom: 12, textAlign: "center" })}>
+        <div style={{ fontSize: 11.5, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em" }}>Übrig heute</div>
+        <div style={{ fontSize: 40, fontWeight: 800, color: C.green, ...glow, ...num, margin: "4px 0" }}>{remaining}</div>
+        <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Verzehrt {Math.round(eaten.kcal)} / Ziel {fd.target.kcal} kcal</div>
+        <Bar pct={(eaten.kcal / (fd.target.kcal || 1)) * 100} />
+        <div style={{ marginTop: 10 }}>
+          {editT ? (
+            <div style={{ display: "grid", gap: 8, textAlign: "left", marginTop: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>kcal</div><input style={input} type="number" value={tgt.kcal} onChange={(e) => setTgt({ ...tgt, kcal: e.target.value })} /></div>
+                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Protein g</div><input style={input} type="number" value={tgt.protein} onChange={(e) => setTgt({ ...tgt, protein: e.target.value })} /></div>
+                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Fett g</div><input style={input} type="number" value={tgt.fat} onChange={(e) => setTgt({ ...tgt, fat: e.target.value })} /></div>
+                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Kohlenhydrate g</div><input style={input} type="number" value={tgt.carbs} onChange={(e) => setTgt({ ...tgt, carbs: e.target.value })} /></div>
+              </div>
+              <button style={btn(true)} onClick={saveTarget}>Ziel speichern</button>
+            </div>
+          ) : (
+            <button style={{ ...btn(), padding: "5px 12px", fontSize: 12 }} onClick={() => { setTgt(fd.target); setEditT(true); }}>Ziel bearbeiten</button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+        <MacroBar label="Kohlenhydrate" val={eaten.carbs} target={fd.target.carbs} color="#6EA8FF" />
+        <MacroBar label="Protein" val={eaten.protein} target={fd.target.protein} color={C.green} />
+        <MacroBar label="Fett" val={eaten.fat} target={fd.target.fat} color="#FF9F0A" />
+      </div>
+
+      <Sec right={<button style={{ ...btn(), padding: "5px 12px", fontSize: 12 }} onClick={() => setEditLib(!editLib)}>{editLib ? "Fertig" : "Meals bearbeiten"}</button>}>Essensprotokoll</Sec>
+
+      {editLib ? (
+        <div style={card({ display: "grid", gap: 8 })}>
+          <Seg options={cats.map((c) => c.name)} value={(cats.find((c) => c.id === libCat) || {}).name} onChange={(n) => { const c = cats.find((x) => x.name === n); if (c) setLibCat(c.id); }} />
+          {fd.meals.filter((m) => m.catId === libCat).map((m) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${C.border}`, borderRadius: 11, padding: "8px 12px" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13.5 }}>{m.name}</div>
+                <div style={{ fontSize: 11.5, color: C.faint }}>{m.kcal} kcal · P{m.protein} F{m.fat} K{m.carbs}</div>
+              </div>
+              <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => removeMeal(m.id)}>✕</button>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 6 }}>Neues Meal · {(cats.find((c) => c.id === libCat) || {}).name}</div>
+          <input style={input} placeholder="Name" value={newMeal.name} onChange={(e) => setNewMeal({ ...newMeal, name: e.target.value })} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+            <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="kcal" value={newMeal.kcal} onChange={(e) => setNewMeal({ ...newMeal, kcal: e.target.value })} />
+            <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="P" value={newMeal.protein} onChange={(e) => setNewMeal({ ...newMeal, protein: e.target.value })} />
+            <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="F" value={newMeal.fat} onChange={(e) => setNewMeal({ ...newMeal, fat: e.target.value })} />
+            <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="Kh" value={newMeal.carbs} onChange={(e) => setNewMeal({ ...newMeal, carbs: e.target.value })} />
+          </div>
+          <button style={btn(true)} onClick={addMeal}>+ Meal hinzufügen</button>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {cats.map((c) => {
+            const catMeals = fd.meals.filter((m) => m.catId === c.id);
+            const catEntries = todays.filter((e) => e.catId === c.id);
+            const isOpen = openCat === c.id;
+            return (
+              <div key={c.id} style={card({ padding: 14 })}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setOpenCat(isOpen ? null : c.id)}>
+                  <span style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {catEntries.length > 0 && <span style={{ fontSize: 12, color: C.sub, ...num }}>{Math.round(catEntries.reduce((a, e) => a + e.kcal, 0))} kcal</span>}
+                    <span style={{ ...btn(true), width: 26, height: 26, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: 16 }}>{isOpen ? "–" : "+"}</span>
+                  </span>
+                </div>
+
+                {catEntries.length > 0 && (
+                  <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
+                    {catEntries.map((e) => (
+                      <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px" }}>
+                        <span>{e.name}</span>
+                        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ color: C.text, fontWeight: 700, ...num }}>{Math.round(e.kcal)} kcal</span>
+                          <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => removeEntry(e.id)}>✕</button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isOpen && (
+                  <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+                    {catMeals.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {catMeals.map((m) => (
+                          <button key={m.id} style={{ ...btn(), fontSize: 12, padding: "8px 12px", textAlign: "left" }} onClick={() => logMeal(m, c.id)}>
+                            {m.name} <span style={{ color: C.faint }}>· {m.kcal} kcal</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, display: "grid", gap: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em" }}>Selbst eintragen</div>
+                      <input style={{ ...input, padding: "8px 10px", fontSize: 14 }} placeholder="Name" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="kcal" value={custom.kcal} onChange={(e) => setCustom({ ...custom, kcal: e.target.value })} />
+                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="P" value={custom.protein} onChange={(e) => setCustom({ ...custom, protein: e.target.value })} />
+                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="F" value={custom.fat} onChange={(e) => setCustom({ ...custom, fat: e.target.value })} />
+                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="Kh" value={custom.carbs} onChange={(e) => setCustom({ ...custom, carbs: e.target.value })} />
+                      </div>
+                      <button style={btn(true)} onClick={() => logCustom(c.id)}>Hinzufügen</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </>
   );
