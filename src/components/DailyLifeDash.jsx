@@ -121,6 +121,8 @@ const seed = {
       { id: "pm8_l1000", catId: "lunch", name: "Protein Pasta Bolognese (1kg)", kcal: 1260, protein: 86, fat: 32, carbs: 150 },
       { id: "pm8_d500", catId: "dinner", name: "Protein Pasta Bolognese (500g)", kcal: 630, protein: 43, fat: 16, carbs: 75 },
       { id: "pm8_d1000", catId: "dinner", name: "Protein Pasta Bolognese (1kg)", kcal: 1260, protein: 86, fat: 32, carbs: 150 },
+
+      { id: "bf1_330", catId: "breakfast", name: "Protein Drink (330ml)", kcal: 221, protein: 35, fat: 1, carbs: 17 },
     ],
     entries: [],
   },
