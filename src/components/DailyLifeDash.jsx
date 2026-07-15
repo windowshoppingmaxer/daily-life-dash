@@ -925,7 +925,7 @@ function Training({ data, up }) {
   const tpls = tr.templates || [];
   const [cat, setCat] = useState(cats[0] ? cats[0].id : "");
   const [date, setDate] = useState(todayKey());
-  const [rows, setRows] = useState([{ name: "", sets: "", reps: "" }]);
+  const [rows, setRows] = useState([{ name: "", reps: "" }]);
   const [dur, setDur] = useState("");
   const [note, setNote] = useState("");
   const [mOff, setMOff] = useState(0);
@@ -949,16 +949,18 @@ function Training({ data, up }) {
   sessions.forEach((s) => { if (s.date.slice(0, 7) === `${y}-${pad(m + 1)}`) { const dd = Number(s.date.slice(8, 10)); dots[dd] = dots[dd] || []; if (!dots[dd].includes(s.catId)) dots[dd].push(s.catId); } });
   const isToday = (dd) => todayKey() === `${y}-${pad(m + 1)}-${pad(dd)}`;
 
+  const parseReps = (str) => String(str || "").split(",").map((x) => Number(x.trim())).filter((n) => Number.isFinite(n) && n > 0);
   const syncRecords = (d, items) => {
     items.forEach((it) => {
-      if (!it.reps) return;
+      if (!it.reps || !it.reps.length) return;
+      const best = Math.max(...it.reps);
       const n = it.name.toLowerCase();
       const s = d.fitness.strands.find((x) => (x.id === "pull" && n.includes("klimm")) || (x.id === "dip" && n.includes("dip")) || (x.id === "push" && (n.includes("liegest") || n.includes("push"))));
-      if (s && it.reps > s.current) s.current = it.reps;
+      if (s && best > s.current) s.current = best;
     });
   };
   const save = () => {
-    const items = rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), sets: Number(r.sets) || null, reps: Number(r.reps) || null }));
+    const items = rows.filter((r) => r.name.trim()).map((r) => ({ name: r.name.trim(), reps: parseReps(r.reps) }));
     const cid = activeCat ? activeCat.id : cat;
     if (!cid || (!items.length && !Number(dur) && !note.trim())) return;
     up((d) => {
@@ -966,23 +968,23 @@ function Training({ data, up }) {
       syncRecords(d, items);
       return d;
     });
-    setRows([{ name: "", sets: "", reps: "" }]); setDur(""); setNote(""); setFreeOpen(false);
+    setRows([{ name: "", reps: "" }]); setDur(""); setNote(""); setFreeOpen(false);
   };
   const saveSimple = (t) => { up((d) => { d.training.sessions.push({ id: Date.now(), date, catId: t.catId, items: [], duration: null, note: t.name }); return d; }); };
-  const startTpl = (t) => { setTpl(t); setTplRows((t.items || []).map((it) => ({ name: it.name, sets: it.sets != null ? String(it.sets) : "", reps: "", kg: "" }))); };
+  const startTpl = (t) => { setTpl(t); setTplRows((t.items || []).map((it) => ({ name: it.name, targetSets: it.sets || null, reps: "", kg: "" }))); };
   const saveTpl = () => {
     if (!tpl) return;
-    const items = tplRows.filter((r) => r.name.trim() && (Number(r.reps) || Number(r.sets) || Number(String(r.kg).replace(",", ".")))).map((r) => ({ name: r.name.trim(), sets: Number(r.sets) || null, reps: Number(r.reps) || null, kg: Number(String(r.kg).replace(",", ".")) || null }));
+    const items = tplRows.filter((r) => r.name.trim() && (parseReps(r.reps).length || Number(String(r.kg).replace(",", ".")))).map((r) => ({ name: r.name.trim(), reps: parseReps(r.reps), kg: Number(String(r.kg).replace(",", ".")) || null }));
     if (!items.length) return;
     up((d) => { d.training.sessions.push({ id: Date.now(), date, catId: tpl.catId, items, duration: null, note: tpl.name }); syncRecords(d, items); return d; });
     setTpl(null);
   };
 
-  const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps).map((i) => i.name)))];
+  const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps && i.reps.length).map((i) => i.name)))];
   const selEx = exNames.includes(exSel) ? exSel : exNames[0] || "";
   const prog = selEx ? sessions
-    .filter((s) => (s.items || []).some((i) => i.name === selEx && i.reps))
-    .map((s) => ({ d: s.date, v: Math.max(...s.items.filter((i) => i.name === selEx && i.reps).map((i) => i.reps)) }))
+    .filter((s) => (s.items || []).some((i) => i.name === selEx && i.reps && i.reps.length))
+    .map((s) => ({ d: s.date, v: Math.max(...s.items.filter((i) => i.name === selEx && i.reps && i.reps.length).flatMap((i) => i.reps)) }))
     .sort((a, b) => a.d.localeCompare(b.d))
     .map((p) => ({ name: `${p.d.slice(8, 10)}.${p.d.slice(5, 7)}.`, Wdh: p.v })) : [];
 
@@ -1071,14 +1073,16 @@ function Training({ data, up }) {
           {tpl && (
             <>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.green }}>{tpl.name} · {date.slice(8, 10)}.{date.slice(5, 7)}.</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1.7fr 0.7fr 0.7fr 0.7fr", gap: 6, fontSize: 10.5, color: C.faint, padding: "0 2px" }}>
-                <span>Übung</span><span>Sätze</span><span>Wdh.</span><span>kg</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1.2fr 0.7fr", gap: 6, fontSize: 10.5, color: C.faint, padding: "0 2px" }}>
+                <span>Übung</span><span>Wdh. je Satz</span><span>kg</span>
               </div>
               {tplRows.map((r, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "1.7fr 0.7fr 0.7fr 0.7fr", gap: 6 }}>
-                  <input style={{ ...input, padding: "9px 10px", fontSize: 14 }} value={r.name} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} type="number" value={r.sets} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, sets: e.target.value } : x)))} />
-                  <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} type="number" value={r.reps} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "1.4fr 1.2fr 0.7fr", gap: 6 }}>
+                  <div>
+                    <input style={{ ...input, padding: "9px 10px", fontSize: 14 }} value={r.name} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                    {r.targetSets ? <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Ziel: {r.targetSets} Sätze</div> : null}
+                  </div>
+                  <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} inputMode="numeric" placeholder="8,6,5" value={r.reps} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
                   <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} inputMode="decimal" value={r.kg} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, kg: e.target.value } : x)))} />
                 </div>
               ))}
@@ -1086,7 +1090,7 @@ function Training({ data, up }) {
                 <button style={{ ...btn(), flex: 1 }} onClick={() => setTpl(null)}>Abbrechen</button>
                 <button style={{ ...btn(true), flex: 2 }} onClick={saveTpl}>Session speichern</button>
               </div>
-              <p style={{ fontSize: 11.5, color: C.faint, margin: 0 }}>Wdh. = bester Satz, kg optional (z.B. Kettlebell). Bestwerte bei Klimmzügen, Dips und Liegestützen aktualisieren automatisch deine Rekorde.</p>
+              <p style={{ fontSize: 11.5, color: C.faint, margin: 0 }}>Wdh. je Satz kommagetrennt eintragen (z.B. 8,6,5 bei 3 Sätzen mit sinkender Wiederholungszahl). kg optional (z.B. Kettlebell). Dein bester Satz zählt automatisch als Rekord bei Klimmzügen, Dips und Liegestützen.</p>
             </>
           )}
           {!tpl && (
@@ -1097,11 +1101,10 @@ function Training({ data, up }) {
               {rows.map((r, i) => (
                 <div key={i} style={{ display: "flex", gap: 6 }}>
                   <input style={{ ...input, flex: 2 }} placeholder="Übung" value={r.name} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <input style={{ ...input, flex: 0.9 }} type="number" placeholder="Sätze" value={r.sets} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, sets: e.target.value } : x)))} />
-                  <input style={{ ...input, flex: 0.9 }} type="number" placeholder="Wdh." value={r.reps} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
+                  <input style={{ ...input, flex: 1.3 }} inputMode="numeric" placeholder="Wdh. je Satz, z.B. 8,6,5" value={r.reps} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
                 </div>
               ))}
-              <button style={btn()} onClick={() => setRows([...rows, { name: "", sets: "", reps: "" }])}>+ Übung</button>
+              <button style={btn()} onClick={() => setRows([...rows, { name: "", reps: "" }])}>+ Übung</button>
               <div style={{ display: "flex", gap: 8 }}>
                 <input style={{ ...input, flex: 1 }} type="number" placeholder="Dauer (Min., optional)" value={dur} onChange={(e) => setDur(e.target.value)} />
                 <input style={{ ...input, flex: 1.4 }} placeholder="Notiz (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -1152,7 +1155,7 @@ function Training({ data, up }) {
                   </span>
                   <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => up((d) => { d.training.sessions = d.training.sessions.filter((x) => x.id !== s.id); return d; })}>✕</button>
                 </div>
-                {(s.items || []).length > 0 && <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4 }}>{s.items.map((it) => `${it.name}${it.sets ? ` ${it.sets}×` : ""}${it.reps ? `${it.sets ? "" : " "}${it.reps}` : ""}${it.kg ? ` @ ${String(it.kg).replace(".", ",")} kg` : ""}`).join(" · ")}</div>}
+                {(s.items || []).length > 0 && <div style={{ fontSize: 12.5, color: C.sub, marginTop: 4 }}>{s.items.map((it) => `${it.name}${it.reps && it.reps.length ? ` ${it.reps.join(",")} Wdh.` : ""}${it.kg ? ` @ ${String(it.kg).replace(".", ",")} kg` : ""}`).join(" · ")}</div>}
                 {(s.duration || s.note) && <div style={{ fontSize: 12, color: C.faint, marginTop: 3 }}>{s.duration ? `${s.duration} Min.` : ""}{s.duration && s.note ? " · " : ""}{s.note || ""}</div>}
               </div>
             ); })}
