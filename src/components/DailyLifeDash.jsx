@@ -1161,6 +1161,16 @@ function Training({ data, up }) {
   );
 }
 
+const FOOD_ICON = { breakfast: "🍳", lunch: "🥗", dinner: "🍲", snack: "🍎", other: "🍽️" };
+
+const Ring = ({ pct, size = 176, stroke = 15, color = C.green, children }) => (
+  <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} ${Math.min(100, Math.max(0, pct)) * 3.6}deg, rgba(255,255,255,0.07) 0deg)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", boxShadow: `0 0 34px rgba(74,222,128,0.18)`, transition: "background 0.5s ease" }}>
+    <div style={{ width: size - stroke * 2, height: size - stroke * 2, borderRadius: "50%", background: "#070B08", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      {children}
+    </div>
+  </div>
+);
+
 // ============================================================
 function Food({ data, up }) {
   const fd = data.food;
@@ -1172,6 +1182,8 @@ function Food({ data, up }) {
   const dateStr = viewDateObj.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
 
   const [openCat, setOpenCat] = useState(null);
+  const [sel, setSel] = useState({});
+  const [showCustom, setShowCustom] = useState({});
   const [custom, setCustom] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
   const [editT, setEditT] = useState(false);
   const [tgt, setTgt] = useState(fd.target);
@@ -1221,26 +1233,26 @@ function Food({ data, up }) {
       </div>
       <H1>🍽️ Essen</H1>
 
-      <div style={hiCard({ marginBottom: 12, textAlign: "center" })}>
-        <div style={{ fontSize: 11.5, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em" }}>Übrig heute</div>
-        <div style={{ fontSize: 40, fontWeight: 800, color: C.green, ...glow, ...num, margin: "4px 0" }}>{remaining}</div>
-        <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Verzehrt {Math.round(eaten.kcal)} / Ziel {fd.target.kcal} kcal</div>
-        <Bar pct={(eaten.kcal / (fd.target.kcal || 1)) * 100} />
-        <div style={{ marginTop: 10 }}>
-          {editT ? (
-            <div style={{ display: "grid", gap: 8, textAlign: "left", marginTop: 6 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>kcal</div><input style={input} type="number" value={tgt.kcal} onChange={(e) => setTgt({ ...tgt, kcal: e.target.value })} /></div>
-                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Protein g</div><input style={input} type="number" value={tgt.protein} onChange={(e) => setTgt({ ...tgt, protein: e.target.value })} /></div>
-                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Fett g</div><input style={input} type="number" value={tgt.fat} onChange={(e) => setTgt({ ...tgt, fat: e.target.value })} /></div>
-                <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Kohlenhydrate g</div><input style={input} type="number" value={tgt.carbs} onChange={(e) => setTgt({ ...tgt, carbs: e.target.value })} /></div>
-              </div>
-              <button style={btn(true)} onClick={saveTarget}>Ziel speichern</button>
+      <div style={hiCard({ marginBottom: 12, textAlign: "center", padding: "22px 15px" })}>
+        <Ring pct={(eaten.kcal / (fd.target.kcal || 1)) * 100}>
+          <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Übrig heute</div>
+          <div style={{ fontSize: 34, fontWeight: 800, color: C.green, ...glow, ...num, margin: "2px 0" }}>{remaining}</div>
+          <div style={{ fontSize: 11.5, color: C.faint }}>von {fd.target.kcal} kcal</div>
+        </Ring>
+        <div style={{ fontSize: 12, color: C.sub, margin: "14px 0 4px" }}>Verzehrt <span style={{ color: C.text, fontWeight: 700 }}>{Math.round(eaten.kcal)}</span> kcal</div>
+        {editT ? (
+          <div style={{ display: "grid", gap: 8, textAlign: "left", marginTop: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>kcal</div><input style={input} type="number" value={tgt.kcal} onChange={(e) => setTgt({ ...tgt, kcal: e.target.value })} /></div>
+              <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Protein g</div><input style={input} type="number" value={tgt.protein} onChange={(e) => setTgt({ ...tgt, protein: e.target.value })} /></div>
+              <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Fett g</div><input style={input} type="number" value={tgt.fat} onChange={(e) => setTgt({ ...tgt, fat: e.target.value })} /></div>
+              <div><div style={{ fontSize: 11, color: C.sub, marginBottom: 3 }}>Kohlenhydrate g</div><input style={input} type="number" value={tgt.carbs} onChange={(e) => setTgt({ ...tgt, carbs: e.target.value })} /></div>
             </div>
-          ) : (
-            <button style={{ ...btn(), padding: "5px 12px", fontSize: 12 }} onClick={() => { setTgt(fd.target); setEditT(true); }}>Ziel bearbeiten</button>
-          )}
-        </div>
+            <button style={btn(true)} onClick={saveTarget}>Ziel speichern</button>
+          </div>
+        ) : (
+          <button style={{ ...btn(), padding: "5px 12px", fontSize: 12, marginTop: 4 }} onClick={() => { setTgt(fd.target); setEditT(true); }}>Ziel bearbeiten</button>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
@@ -1279,13 +1291,14 @@ function Food({ data, up }) {
             const catMeals = fd.meals.filter((m) => m.catId === c.id);
             const catEntries = todays.filter((e) => e.catId === c.id);
             const isOpen = openCat === c.id;
+            const selMeal = catMeals.find((m) => m.id === sel[c.id]) || catMeals[0];
             return (
-              <div key={c.id} style={card({ padding: 14 })}>
+              <div key={c.id} style={card({ padding: 14, border: isOpen ? `1px solid rgba(74,222,128,0.25)` : `1px solid ${C.border}` })}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setOpenCat(isOpen ? null : c.id)}>
-                  <span style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 15 }}><span style={{ fontSize: 18 }}>{FOOD_ICON[c.id] || "🍽️"}</span>{c.name}</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {catEntries.length > 0 && <span style={{ fontSize: 12, color: C.sub, ...num }}>{Math.round(catEntries.reduce((a, e) => a + e.kcal, 0))} kcal</span>}
-                    <span style={{ ...btn(true), width: 26, height: 26, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontSize: 16 }}>{isOpen ? "–" : "+"}</span>
+                    <span style={{ width: 26, height: 26, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: isOpen ? "#04110A" : C.sub, background: isOpen ? C.green : "rgba(255,255,255,0.06)", boxShadow: isOpen ? "0 0 12px rgba(74,222,128,0.4)" : "none" }}>{isOpen ? "–" : "+"}</span>
                   </span>
                 </div>
 
@@ -1306,25 +1319,40 @@ function Food({ data, up }) {
                 {isOpen && (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {catMeals.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {catMeals.map((m) => (
-                          <button key={m.id} style={{ ...btn(), fontSize: 12, padding: "8px 12px", textAlign: "left" }} onClick={() => logMeal(m, c.id)}>
-                            {m.name} <span style={{ color: C.faint }}>· {m.kcal} kcal</span>
-                          </button>
-                        ))}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <select
+                          style={{ ...input, flex: 1, padding: "10px 12px" }}
+                          value={selMeal ? selMeal.id : ""}
+                          onChange={(e) => setSel({ ...sel, [c.id]: e.target.value })}
+                        >
+                          {catMeals.map((m) => (
+                            <option key={m.id} value={m.id}>{m.name} · {m.kcal} kcal</option>
+                          ))}
+                        </select>
+                        <button style={btn(true)} onClick={() => selMeal && logMeal(selMeal, c.id)}>+</button>
                       </div>
                     )}
-                    <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, display: "grid", gap: 6 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em" }}>Selbst eintragen</div>
-                      <input style={{ ...input, padding: "8px 10px", fontSize: 14 }} placeholder="Name" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="kcal" value={custom.kcal} onChange={(e) => setCustom({ ...custom, kcal: e.target.value })} />
-                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="P" value={custom.protein} onChange={(e) => setCustom({ ...custom, protein: e.target.value })} />
-                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="F" value={custom.fat} onChange={(e) => setCustom({ ...custom, fat: e.target.value })} />
-                        <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="Kh" value={custom.carbs} onChange={(e) => setCustom({ ...custom, carbs: e.target.value })} />
+                    {selMeal && (
+                      <div style={{ fontSize: 11.5, color: C.faint, padding: "0 2px" }}>P {selMeal.protein}g · F {selMeal.fat}g · Kh {selMeal.carbs}g</div>
+                    )}
+                    <button
+                      style={{ border: "none", background: "transparent", color: C.sub, cursor: "pointer", fontSize: 12, padding: "6px 0", textAlign: "left" }}
+                      onClick={() => setShowCustom({ ...showCustom, [c.id]: !showCustom[c.id] })}
+                    >
+                      {showCustom[c.id] ? "‹ Selbst eintragen ausblenden" : "＋ Selbst eintragen (nicht in der Liste)"}
+                    </button>
+                    {showCustom[c.id] && (
+                      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, display: "grid", gap: 6 }}>
+                        <input style={{ ...input, padding: "8px 10px", fontSize: 14 }} placeholder="Name" value={custom.name} onChange={(e) => setCustom({ ...custom, name: e.target.value })} />
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+                          <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="kcal" value={custom.kcal} onChange={(e) => setCustom({ ...custom, kcal: e.target.value })} />
+                          <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="P" value={custom.protein} onChange={(e) => setCustom({ ...custom, protein: e.target.value })} />
+                          <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="F" value={custom.fat} onChange={(e) => setCustom({ ...custom, fat: e.target.value })} />
+                          <input style={{ ...input, padding: "8px 8px" }} type="number" placeholder="Kh" value={custom.carbs} onChange={(e) => setCustom({ ...custom, carbs: e.target.value })} />
+                        </div>
+                        <button style={btn(true)} onClick={() => logCustom(c.id)}>Hinzufügen</button>
                       </div>
-                      <button style={btn(true)} onClick={() => logCustom(c.id)}>Hinzufügen</button>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
