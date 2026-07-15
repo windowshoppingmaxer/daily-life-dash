@@ -949,7 +949,7 @@ function Training({ data, up }) {
   sessions.forEach((s) => { if (s.date.slice(0, 7) === `${y}-${pad(m + 1)}`) { const dd = Number(s.date.slice(8, 10)); dots[dd] = dots[dd] || []; if (!dots[dd].includes(s.catId)) dots[dd].push(s.catId); } });
   const isToday = (dd) => todayKey() === `${y}-${pad(m + 1)}-${pad(dd)}`;
 
-  const parseReps = (str) => String(str || "").split(",").map((x) => Number(x.trim())).filter((n) => Number.isFinite(n) && n > 0);
+  const parseReps = (str) => String(str || "").split(/[,\s]+/).map((x) => Number(x.trim())).filter((n) => Number.isFinite(n) && n > 0);
   const syncRecords = (d, items) => {
     items.forEach((it) => {
       if (!it.reps || !it.reps.length) return;
@@ -1082,7 +1082,7 @@ function Training({ data, up }) {
                     <input style={{ ...input, padding: "9px 10px", fontSize: 14 }} value={r.name} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
                     {r.targetSets ? <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Ziel: {r.targetSets} Sätze</div> : null}
                   </div>
-                  <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} inputMode="numeric" placeholder="8,6,5" value={r.reps} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
+                  <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} placeholder="8,6,5" value={r.reps} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
                   <input style={{ ...input, padding: "9px 8px", fontSize: 14 }} inputMode="decimal" value={r.kg} onChange={(e) => setTplRows(tplRows.map((x, j) => (j === i ? { ...x, kg: e.target.value } : x)))} />
                 </div>
               ))}
@@ -1101,7 +1101,7 @@ function Training({ data, up }) {
               {rows.map((r, i) => (
                 <div key={i} style={{ display: "flex", gap: 6 }}>
                   <input style={{ ...input, flex: 2 }} placeholder="Übung" value={r.name} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                  <input style={{ ...input, flex: 1.3 }} inputMode="numeric" placeholder="Wdh. je Satz, z.B. 8,6,5" value={r.reps} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
+                  <input style={{ ...input, flex: 1.3 }} placeholder="Wdh. je Satz, z.B. 8,6,5" value={r.reps} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))} />
                 </div>
               ))}
               <button style={btn()} onClick={() => setRows([...rows, { name: "", reps: "" }])}>+ Übung</button>
