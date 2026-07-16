@@ -34,7 +34,7 @@ const daysAgoText = (k) => { const diff = Math.round((new Date(todayKey()) - new
 // ---------- Seed ----------
 const seed = {
   finance: { goal: 20000, entries: [], netWorthHistory: [] },
-  sales: { cert: false, courseName: "Sales-Kurs abschließen", oppTarget: 3, oppCount: 0, quota: false },
+  sales: { cert: false, courseName: "Sales-Kurs abschließen", oppTarget: 3, oppCount: 0, quota: false, opsMonth: false },
   fitness: { strands: [
     { id: "pull", name: "Klimmzüge", milestones: [5, 10, 20], current: 0 },
     { id: "dip", name: "Dips", milestones: [5, 10, 15], current: 0 },
@@ -353,7 +353,7 @@ function Home({ data, up, open }) {
   const isPast = dayOff < 0;
   const dateStr = viewDateObj.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
   const fin = financeStats(data.finance);
-  const salesDone = (data.sales.cert ? 1 : 0) + (data.sales.oppCount >= data.sales.oppTarget ? 1 : 0) + (data.sales.quota ? 1 : 0);
+  const salesDone = (data.sales.cert ? 1 : 0) + (data.sales.oppCount >= data.sales.oppTarget ? 1 : 0) + (data.sales.quota ? 1 : 0) + (data.sales.opsMonth ? 1 : 0);
   const fitPct = Math.round(data.fitness.strands.reduce((a, s) => a + Math.min(1, s.current / s.milestones[s.milestones.length - 1]), 0) / data.fitness.strands.length * 100);
   const chessPct = Math.round(Math.min(1, Math.max(0, (data.chess.elo - 800) / (data.chess.eloTarget - 800))) * 100);
   const toggleHabit = (id) => up((d) => { const k = viewKey; d.habits.checks[k] = d.habits.checks[k] || {}; d.habits.checks[k][id] = !d.habits.checks[k][id]; return d; });
@@ -413,11 +413,12 @@ function Home({ data, up, open }) {
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
-        <Tile id="sales" icon="🎯" title="Sales" sub={`${salesDone}/3`}>
+        <Tile id="sales" icon="🎯" title="Sales" sub={`${salesDone}/4`}>
           <div style={{ display: "grid", gap: 6 }}>
             <MiniMile label={data.sales.courseName || "Sales-Kurs abschließen"} done={data.sales.cert} />
             <MiniMile label={`${data.sales.oppCount}/${data.sales.oppTarget} selbst generierte OPPs`} done={data.sales.oppCount >= data.sales.oppTarget} />
             <MiniMile label="Quota in einem Monat" done={data.sales.quota} />
+            <MiniMile label="3 Ops in einem Monat" done={data.sales.opsMonth} />
           </div>
         </Tile>
 
@@ -609,6 +610,10 @@ function Sales({ data, up, back }) {
         <div style={card({ display: "flex", alignItems: "center", gap: 12 })}>
           <Check checked={s.quota} onClick={() => up((d) => { d.sales.quota = !d.sales.quota; return d; })} size={28} />
           <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 15 }}>Quota in einem Monat hitten</div><div style={{ fontSize: 12.5, color: C.sub }}>Der große Beweis</div></div>
+        </div>
+        <div style={card({ display: "flex", alignItems: "center", gap: 12 })}>
+          <Check checked={s.opsMonth} onClick={() => up((d) => { d.sales.opsMonth = !d.sales.opsMonth; return d; })} size={28} />
+          <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 15 }}>3 Ops in einem Monat</div><div style={{ fontSize: 12.5, color: C.sub }}>Konstanz statt Einzeltreffer</div></div>
         </div>
       </div>
     </>
