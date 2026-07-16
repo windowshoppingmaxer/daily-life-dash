@@ -1191,6 +1191,8 @@ function Food({ data, up }) {
   const isPast = dayOff < 0;
   const dateStr = viewDateObj.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
 
+  const [view, setView] = useState("day");
+  const [mOff, setMOff] = useState(0);
   const [openCat, setOpenCat] = useState(null);
   const [sel, setSel] = useState({});
   const [showCustom, setShowCustom] = useState({});
@@ -1223,6 +1225,18 @@ function Food({ data, up }) {
   };
   const removeMeal = (id) => up((d) => { d.food.meals = d.food.meals.filter((m) => m.id !== id); return d; });
 
+  const dayRating = (dateKey) => {
+    const dayEntries = fd.entries.filter((e) => e.date === dateKey);
+    if (!dayEntries.length) return null;
+    const kcal = dayEntries.reduce((a, e) => a + (Number(e.kcal) || 0), 0);
+    const protein = dayEntries.reduce((a, e) => a + (Number(e.protein) || 0), 0);
+    const pPct = fd.target.protein ? protein / fd.target.protein : 0;
+    const kPct = fd.target.kcal ? kcal / fd.target.kcal : 0;
+    if (pPct < 0.6) return "red";
+    if (pPct < 0.9 || kPct > 1.2) return "orange";
+    return "green";
+  };
+
   const MacroBar = ({ label, val, target, color }) => (
     <div style={card({ padding: 12 })}>
       <div style={{ fontSize: 11.5, color: C.sub }}>{label}</div>
@@ -1235,14 +1249,61 @@ function Food({ data, up }) {
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 2px 0" }}>
-        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14 }} onClick={() => setDayOff(dayOff - 1)}>‹</button>
-        <span style={{ color: isPast ? C.flame : C.sub, fontSize: 13, textTransform: "capitalize", fontWeight: isPast ? 700 : 400 }}>{dateStr}</span>
-        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14, opacity: dayOff === 0 ? 0.35 : 1, cursor: dayOff === 0 ? "default" : "pointer" }} disabled={dayOff === 0} onClick={() => setDayOff(Math.min(0, dayOff + 1))}>›</button>
-        {isPast && <button style={{ ...btn(true), padding: "3px 11px", fontSize: 11.5 }} onClick={() => setDayOff(0)}>Heute</button>}
+      {view === "day" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 2px 0" }}>
+          <button style={{ ...btn(), padding: "3px 11px", fontSize: 14 }} onClick={() => setDayOff(dayOff - 1)}>‹</button>
+          <span style={{ color: isPast ? C.flame : C.sub, fontSize: 13, textTransform: "capitalize", fontWeight: isPast ? 700 : 400 }}>{dateStr}</span>
+          <button style={{ ...btn(), padding: "3px 11px", fontSize: 14, opacity: dayOff === 0 ? 0.35 : 1, cursor: dayOff === 0 ? "default" : "pointer" }} disabled={dayOff === 0} onClick={() => setDayOff(Math.min(0, dayOff + 1))}>›</button>
+          {isPast && <button style={{ ...btn(true), padding: "3px 11px", fontSize: 11.5 }} onClick={() => setDayOff(0)}>Heute</button>}
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 14px" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.03em", margin: 0 }}>🍽️ Essen</h1>
+        <button style={{ ...btn(), padding: "6px 12px", fontSize: 12 }} onClick={() => setView(view === "day" ? "month" : "day")}>{view === "day" ? "📅 Monat" : "‹ Tag"}</button>
       </div>
-      <H1>🍽️ Essen</H1>
 
+      {view === "month" ? (() => {
+        const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + mOff);
+        const y = base.getFullYear(), m = base.getMonth();
+        const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+        const dim = new Date(y, m + 1, 0).getDate();
+        const ratingColor = { green: C.green, orange: C.flame, red: C.red };
+        const counts = { green: 0, orange: 0, red: 0 };
+        const cells = Array.from({ length: dim }).map((_, i) => {
+          const dd = i + 1;
+          const key = `${y}-${pad(m + 1)}-${pad(dd)}`;
+          const r = dayRating(key);
+          if (r) counts[r]++;
+          return { dd, r };
+        });
+        return (
+          <>
+            <div style={card({ padding: 12, marginBottom: 12 })}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <button style={{ ...btn(), padding: "4px 12px" }} onClick={() => setMOff(mOff - 1)}>‹</button>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>{MONTHS[m]} {y}</div>
+                <button style={{ ...btn(), padding: "4px 12px" }} onClick={() => setMOff(mOff + 1)}>›</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => <div key={d} style={{ textAlign: "center", fontSize: 10, color: C.faint, padding: "2px 0" }}>{d}</div>)}
+                {Array.from({ length: firstDow }).map((_, i) => <div key={"e" + i} />)}
+                {cells.map(({ dd, r }) => (
+                  <div key={dd} style={{ textAlign: "center", padding: "7px 0", borderRadius: 9, background: r ? `${ratingColor[r]}22` : "rgba(255,255,255,0.03)", border: `1px solid ${r ? ratingColor[r] : C.border}` }}>
+                    <div style={{ fontSize: 12, fontWeight: r ? 800 : 400, color: r ? ratingColor[r] : C.faint }}>{dd}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 14, justifyContent: "center", fontSize: 12, color: C.sub, marginBottom: 6 }}>
+              <span><span style={{ color: C.green }}>●</span> {counts.green} gut</span>
+              <span><span style={{ color: C.flame }}>●</span> {counts.orange} okay</span>
+              <span><span style={{ color: C.red }}>●</span> {counts.red} schwach</span>
+            </div>
+            <p style={{ fontSize: 11.5, color: C.faint, textAlign: "center", margin: "6px 4px 0" }}>Grün = Protein-Ziel erreicht. Orange = Protein knapp verfehlt oder Kalorien deutlich drüber (&gt;120%). Rot = Protein stark verfehlt (&lt;60%).</p>
+          </>
+        );
+      })() : (
+      <>
       <div style={hiCard({ marginBottom: 12, textAlign: "center", padding: "22px 15px" })}>
         <Ring pct={(eaten.kcal / (fd.target.kcal || 1)) * 100}>
           <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Übrig heute</div>
@@ -1369,6 +1430,8 @@ function Food({ data, up }) {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </>
   );
