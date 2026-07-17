@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 import Login from "./components/Login";
 import Dashboard from "./components/DailyLifeDash";
-
-const C = { bg: "#05080A", green: "#4ADE80" };
-const FONT = `-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif`;
+import Boot from "./components/Boot";
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = noch unbekannt, null = kein Login
+  const [booted, setBooted] = useState(false); // Boot-Screen einmal pro echtem Seitenaufruf, nicht bei jeder In-App-Navigation
+  const [dashReady, setDashReady] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -15,15 +15,18 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (session === undefined) {
-    return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontFamily: FONT }}>
-        Systeme laden…
-      </div>
-    );
-  }
+  // Boot-Screen bleibt offen, bis wirklich etwas zum Zeigen da ist: bei Login sofort,
+  // beim Dashboard erst wenn dessen eigener Ladevorgang (Erfolg oder Fehler) fertig ist.
+  const contentReady = session === undefined ? false : session ? dashReady : true;
 
-  if (!session) return <Login />;
-
-  return <Dashboard user={session.user} onSignOut={() => supabase.auth.signOut()} />;
+  return (
+    <>
+      {session === undefined ? null : !session ? (
+        <Login />
+      ) : (
+        <Dashboard user={session.user} onSignOut={() => supabase.auth.signOut()} onReady={() => setDashReady(true)} />
+      )}
+      {!booted && <Boot ready={contentReady} onEnter={() => setBooted(true)} />}
+    </>
+  );
 }

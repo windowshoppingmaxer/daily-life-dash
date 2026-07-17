@@ -246,12 +246,13 @@ const writeCache = (userId, d) => {
 };
 
 // ============================================================
-export default function Dashboard({ user, onSignOut }) {
+export default function Dashboard({ user, onSignOut, onReady }) {
   const [data, setData] = useState(null);
   const [nav, setNav] = useState("home");
   const [err, setErr] = useState(null);
   const [blocked, setBlocked] = useState(false);
   const t = useRef(null); const loaded = useRef(false); const blockRef = useRef(false);
+  const finishLoad = () => { loaded.current = true; onReady && onReady(); };
 
   useEffect(() => { (async () => {
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -266,11 +267,11 @@ export default function Dashboard({ user, onSignOut }) {
       const cached = readCache(user.id);
       if (cached) {
         setErr("Offline – zeige zuletzt gespeicherten Stand. Änderungen werden synchronisiert, sobald wieder Netz da ist.");
-        setData(mergeData(cached)); loaded.current = true; return;
+        setData(mergeData(cached)); finishLoad(); return;
       }
       setErr("Deine gespeicherten Daten konnten nicht geladen werden (Verbindung?: " + (lastError?.message || "unbekannter Fehler") + "). Speichern ist deaktiviert, damit nichts überschrieben wird – bitte neu laden.");
       setBlocked(true); blockRef.current = true;
-      setData(seed); loaded.current = true; return;
+      setData(seed); finishLoad(); return;
     }
     if (row == null || !row.data || Object.keys(row.data).length === 0) {
       // Erster Login: noch keine Zeile / leere Zeile -> mit Seed anlegen
@@ -282,11 +283,11 @@ export default function Dashboard({ user, onSignOut }) {
       } else {
         writeCache(user.id, initial);
       }
-      setData(initial); loaded.current = true; return;
+      setData(initial); finishLoad(); return;
     }
     setData(mergeData(row.data));
     writeCache(user.id, row.data);
-    loaded.current = true;
+    finishLoad();
   })(); }, [user.id]);
 
   const saveNow = async (d, attempt = 1) => {
