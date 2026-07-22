@@ -65,7 +65,7 @@ const seed = {
     { id: "t_shoot", catId: "basketball", name: "Shooting Drill", items: [] },
     { id: "t_stretch", catId: "stretch", name: "Stretching-Session", items: [] },
   ], sessions: [] },
-  tasks: { daily: [], weekly: [], monthly: [], checks: { daily: {}, weekly: {}, monthly: {} } },
+  tasks: { entries: {} },
   achievements: { ultimate: { title: "Net Worth 100.000 €", target: "100000" }, items: [
     { id: 2, title: "Erste Quota gehittet", target: "", done: false },
     { id: 3, title: "Erster Muscle Up", target: "", done: false },
@@ -358,6 +358,12 @@ function Home({ data, up, open }) {
   const fitPct = Math.round(data.fitness.strands.reduce((a, s) => a + Math.min(1, s.current / s.milestones[s.milestones.length - 1]), 0) / data.fitness.strands.length * 100);
   const chessPct = Math.round(Math.min(1, Math.max(0, (data.chess.elo - 800) / (data.chess.eloTarget - 800))) * 100);
   const toggleHabit = (id) => up((d) => { const k = viewKey; d.habits.checks[k] = d.habits.checks[k] || {}; d.habits.checks[k][id] = !d.habits.checks[k][id]; return d; });
+  const isFuture = dayOff > 0;
+  const todos = data.tasks.entries[viewKey] || [];
+  const [newTodo, setNewTodo] = useState("");
+  const addTodo = () => { if (!newTodo.trim()) return; up((d) => { d.tasks.entries[viewKey] = d.tasks.entries[viewKey] || []; d.tasks.entries[viewKey].push({ id: Date.now(), text: newTodo.trim(), done: false }); return d; }); setNewTodo(""); };
+  const toggleTodo = (id) => up((d) => { const list = d.tasks.entries[viewKey] || []; const item = list.find((x) => x.id === id); if (item) item.done = !item.done; return d; });
+  const removeTodo = (id) => up((d) => { d.tasks.entries[viewKey] = (d.tasks.entries[viewKey] || []).filter((x) => x.id !== id); return d; });
   const [editH, setEditH] = useState(false);
   const [newH, setNewH] = useState("");
   const addHabit = () => { if (!newH.trim()) return; up((d) => { d.habits.list.push({ id: "h" + Date.now(), name: newH.trim() }); return d; }); setNewH(""); };
@@ -384,11 +390,28 @@ function Home({ data, up, open }) {
     <>
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 2px 0" }}>
         <button style={{ ...btn(), padding: "3px 11px", fontSize: 14 }} onClick={() => setDayOff(dayOff - 1)}>‹</button>
-        <span style={{ color: isPast ? C.flame : C.sub, fontSize: 13, textTransform: "capitalize", fontWeight: isPast ? 700 : 400 }}>{dateStr}</span>
-        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14, opacity: dayOff === 0 ? 0.35 : 1, cursor: dayOff === 0 ? "default" : "pointer" }} disabled={dayOff === 0} onClick={() => setDayOff(Math.min(0, dayOff + 1))}>›</button>
-        {isPast && <button style={{ ...btn(true), padding: "3px 11px", fontSize: 11.5 }} onClick={() => setDayOff(0)}>Heute</button>}
+        <span style={{ color: isPast ? C.flame : isFuture ? C.green : C.sub, fontSize: 13, textTransform: "capitalize", fontWeight: isPast || isFuture ? 700 : 400 }}>{dateStr}</span>
+        <button style={{ ...btn(), padding: "3px 11px", fontSize: 14 }} onClick={() => setDayOff(dayOff + 1)}>›</button>
+        {dayOff !== 0 && <button style={{ ...btn(true), padding: "3px 11px", fontSize: 11.5 }} onClick={() => setDayOff(0)}>Heute</button>}
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", margin: "2px 2px 14px" }}>Overview <span style={{ color: C.green, ...glow }}>●</span></h1>
+
+      <Sec>To-dos {isFuture && <span style={{ fontSize: 11, fontWeight: 400, color: C.faint, textTransform: "none" }}>· für {dateStr}</span>}</Sec>
+      <div style={card({ padding: 6, marginBottom: 4 })}>
+        {todos.length === 0 && <div style={{ padding: "10px 8px", fontSize: 12.5, color: C.faint }}>Noch nichts eingetragen.</div>}
+        {todos.map((t, i) => (
+          <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 8px", borderBottom: i < todos.length - 1 ? `1px solid ${C.border}` : "none" }}>
+            <Check checked={t.done} onClick={() => toggleTodo(t.id)} />
+            <span style={{ flex: 1, fontSize: 14.5, color: t.done ? C.faint : C.text, textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+            <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer", fontSize: 15, padding: "0 4px" }} onClick={() => removeTodo(t.id)}>✕</button>
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 8, padding: "9px 8px" }}>
+          <input style={{ ...input, flex: 1, padding: "8px 10px", fontSize: 14 }} placeholder={isFuture ? `Für ${dateStr} eintragen…` : "Neues To-do"} value={newTodo} onChange={(e) => setNewTodo(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addTodo(); }} />
+          <button style={{ ...btn(true), padding: "6px 14px" }} onClick={addTodo}>+</button>
+        </div>
+      </div>
+      <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px 20px" }}>Mit "›" auch für kommende Tage vorplanen — abends schon eintragen, was morgen ansteht.</p>
 
       {/* Geld with forecast */}
       <div onClick={() => open("geld")} style={hiCard({ padding: 15, cursor: "pointer", marginBottom: 10 })}>
@@ -489,7 +512,7 @@ function Home({ data, up, open }) {
           </div>
         )}
       </div>
-      <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px" }}>{editH ? "▲▼ verschiebt die Reihenfolge. Umbenennen behält die Streak. Löschen entfernt die Gewohnheit dauerhaft." : isPast ? `Du hakst gerade für ${viewKey.slice(8, 10)}.${viewKey.slice(5, 7)}. ab – Streaks aktualisieren sich automatisch.` : "Jede Gewohnheit hat ihre eigene Streak. Antippen = heute erledigt."}</p>
+      <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px" }}>{editH ? "▲▼ verschiebt die Reihenfolge. Umbenennen behält die Streak. Löschen entfernt die Gewohnheit dauerhaft." : isPast ? `Du hakst gerade für ${viewKey.slice(8, 10)}.${viewKey.slice(5, 7)}. ab – Streaks aktualisieren sich automatisch.` : isFuture ? `Du siehst gerade den ${viewKey.slice(8, 10)}.${viewKey.slice(5, 7)}. voraus – zum Abhaken einfach warten, bis der Tag da ist.` : "Jede Gewohnheit hat ihre eigene Streak. Antippen = heute erledigt."}</p>
     </>
   );
 }
