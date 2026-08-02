@@ -317,7 +317,7 @@ export default function Dashboard({ user, onSignOut, onReady }) {
   if (!data) return <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontFamily: FONT, ...glow }}>Systeme laden…</div>;
 
   const inAreas = ["geld", "sales", "fitness", "chess"].includes(nav);
-  const tabs = [{ id: "home", l: "Home" }, { id: "training", l: "Training" }, { id: "food", l: "Essen" }, { id: "ach", l: "Erfolge" }];
+  const tabs = [{ id: "home", l: "Home" }, { id: "training", l: "Training" }, { id: "food", l: "Essen" }];
 
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(65% 45% at 50% -8%, rgba(74,222,128,0.10), transparent 60%), ${C.bg}`, color: C.text, fontFamily: FONT, paddingBottom: 92 }}>
@@ -329,13 +329,12 @@ export default function Dashboard({ user, onSignOut, onReady }) {
           </div>
         )}
         {nav === "home" && <Home data={data} up={up} open={setNav} />}
-        {nav === "geld" && <Geld data={data} up={up} back={() => setNav("home")} />}
+        {nav === "geld" && <Geld data={data} up={up} back={() => setNav("home")} doImport={doImport} onSignOut={onSignOut} userEmail={user.email} />}
         {nav === "sales" && <Sales data={data} up={up} back={() => setNav("home")} />}
         {nav === "fitness" && <Fitness data={data} up={up} back={() => setNav("home")} />}
         {nav === "chess" && <ChessView data={data} up={up} back={() => setNav("home")} />}
         {nav === "training" && <Training data={data} up={up} />}
         {nav === "food" && <Food data={data} up={up} />}
-        {nav === "ach" && <Achievements data={data} up={up} doImport={doImport} onSignOut={onSignOut} userEmail={user.email} />}
       </div>
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "8px 12px calc(12px + env(safe-area-inset-bottom))", background: "rgba(5,10,7,0.75)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderTop: `1px solid ${C.border}` }}>
         <div style={{ display: "flex", gap: 4, width: "100%", maxWidth: 560 }}>
@@ -520,7 +519,7 @@ function Home({ data, up, open }) {
 }
 
 // ============================================================
-function Geld({ data, up, back }) {
+function Geld({ data, up, back, doImport, onSignOut, userEmail }) {
   const fin = financeStats(data.finance);
   const now = new Date();
   const [f, setF] = useState({ month: `${now.getFullYear()}-${pad(now.getMonth() + 1)}`, amount: "", note: "" });
@@ -530,6 +529,22 @@ function Geld({ data, up, back }) {
   const saveNW = () => { if (!Number(nw)) return; up((d) => { d.finance.netWorthHistory = d.finance.netWorthHistory || []; d.finance.netWorthHistory.push({ date: todayKey(), value: Number(nw) }); return d; }); setNw(""); };
   const add = () => { if (!Number(f.amount)) return; up((d) => { d.finance.entries.push({ id: Date.now(), month: f.month, amount: Number(f.amount), note: f.note }); return d; }); setF({ ...f, amount: "", note: "" }); };
   const sorted = [...data.finance.entries].sort((a, b) => b.month.localeCompare(a.month) || b.id - a.id);
+
+  const nwForGoal = currentNW || 0;
+  const ult = data.achievements.ultimate;
+  const ultTarget = Number(ult.target) || 0;
+  const ultPct = ultTarget > 0 ? Math.min(100, Math.round((nwForGoal / ultTarget) * 100)) : null;
+
+  const incEntries = [...(data.income?.entries || [])].sort((a, b) => b.month.localeCompare(a.month));
+  const incBest = incEntries.reduce((m, e) => Math.max(m, e.amount), 0);
+  const incTarget = data.income?.target || 10000;
+  const incPct = Math.min(100, Math.round((incBest / incTarget) * 100));
+  const incSteps = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+  const [inc, setInc] = useState({ month: `${now.getFullYear()}-${pad(now.getMonth() + 1)}`, amount: "" });
+  const addIncome = () => { if (!Number(inc.amount)) return; up((d) => { d.income = d.income || { target: 10000, entries: [] }; d.income.entries.push({ id: Date.now(), month: inc.month, amount: Number(inc.amount) }); return d; }); setInc({ ...inc, amount: "" }); };
+
+  const [showMore, setShowMore] = useState(false);
+  const [dt, setDt] = useState({ show: false, mode: "export", txt: "", msg: "", ok: false });
 
   return (
     <>
@@ -545,6 +560,23 @@ function Geld({ data, up, back }) {
           <input style={{ ...input, flex: 1 }} type="number" placeholder="Aktueller Net Worth €" value={nw} onChange={(e) => setNw(e.target.value)} />
           <button style={btn(true)} onClick={saveNW}>Aktualisieren</button>
         </div>
+
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: C.green, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Ultimatives Ziel</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8 }}>
+            <input style={input} value={ult.title} onChange={(e) => up((d) => { d.achievements.ultimate.title = e.target.value; return d; })} />
+            <input style={input} type="number" placeholder="Ziel €" value={ult.target} onChange={(e) => up((d) => { d.achievements.ultimate.target = e.target.value; return d; })} />
+          </div>
+          {ultPct != null && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.sub, margin: "12px 2px 6px" }}>
+                <span style={num}>{eur(nwForGoal)}</span><span style={{ color: C.green, fontWeight: 800, ...glow, ...num }}>{ultPct} %</span><span style={num}>{eur(ultTarget)}</span>
+              </div>
+              <Bar pct={ultPct} />
+            </>
+          )}
+        </div>
+
         {nwHistory.length > 1 && (
           <div style={{ marginTop: 12 }}>
             <ResponsiveContainer width="100%" height={110}>
@@ -606,6 +638,76 @@ function Geld({ data, up, back }) {
           </div>
         ))}
       </div>
+
+      <div style={hiCard({ marginTop: 20, marginBottom: 12 })}>
+        <div style={{ fontSize: 10.5, fontWeight: 800, color: C.green, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Einkommen · 10k netto in einem Monat</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: C.green, ...glow, ...num }}>{eur(incBest)}</span>
+          <span style={{ fontSize: 12.5, color: C.sub }}>bester Monat · <span style={{ color: C.green, fontWeight: 800, ...num }}>{incPct} %</span></span>
+        </div>
+        <Bar pct={incPct} />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "12px 0" }}>
+          {incSteps.map((s) => { const hit = incBest >= s; return (
+            <span key={s} style={{ fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 999, color: hit ? "#04110A" : C.sub, background: hit ? C.green : "rgba(255,255,255,0.06)", boxShadow: hit ? "0 0 11px rgba(74,222,128,0.4)" : "none", ...num }}>{hit ? "✓ " : ""}{s / 1000}k</span>
+          ); })}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={{ ...input, flex: 1 }} type="month" value={inc.month} onChange={(e) => setInc({ ...inc, month: e.target.value })} />
+          <input style={{ ...input, flex: 1 }} type="number" placeholder="Netto €" value={inc.amount} onChange={(e) => setInc({ ...inc, amount: e.target.value })} />
+          <button style={btn(true)} onClick={addIncome}>+</button>
+        </div>
+        {incEntries.length > 0 && (
+          <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+            {incEntries.slice(0, 6).map((e) => (
+              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px" }}>
+                <span>{MONTHS[Number(e.month.slice(5, 7)) - 1]} {e.month.slice(0, 4)}</span>
+                <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <span style={{ color: C.text, fontWeight: 700, ...num }}>{eur(e.amount)}</span>
+                  <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => up((d) => { d.income.entries = d.income.entries.filter((x) => x.id !== e.id); return d; })}>✕</button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button style={{ ...btn(), fontSize: 12, margin: "4px 2px 8px" }} onClick={() => setShowMore(!showMore)}>{showMore ? "▴ Weniger" : "▾ Mehr (Backup, Account)"}</button>
+      {showMore && (
+        <>
+          <Sec>Daten-Backup</Sec>
+          <div style={card({ display: "grid", gap: 8 })}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...btn(dt.show && dt.mode === "export"), flex: 1 }} onClick={() => setDt({ show: true, mode: "export", txt: "", msg: "", ok: false })}>Exportieren</button>
+              <button style={{ ...btn(dt.show && dt.mode === "import"), flex: 1 }} onClick={() => setDt({ show: true, mode: "import", txt: "", msg: "", ok: false })}>Importieren</button>
+            </div>
+            {dt.show && dt.mode === "export" && (() => { const json = JSON.stringify(data); const days = Object.keys((data.habits && data.habits.checks) || {}).length; return (
+              <>
+                <div style={{ fontSize: 12, color: C.sub }}>Live-Stand: {data.finance.entries.length} Investitionen · {days} Habit-Tage · {((data.training && data.training.sessions) || []).length} Sessions · {((data.fitness.weight && data.fitness.weight.entries) || []).length} Gewichtseinträge · {data.habits.list.length} Habits</div>
+                <button style={btn(true)} onClick={async () => {
+                  let done = false;
+                  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(json); done = true; } } catch (e) {}
+                  if (!done) { try { const ta = document.createElement("textarea"); ta.value = json; document.body.appendChild(ta); ta.select(); done = document.execCommand("copy"); document.body.removeChild(ta); } catch (e) {} }
+                  setDt({ ...dt, msg: done ? "Kopiert ✓ – jetzt in deine Notizen einfügen." : "Kopieren fehlgeschlagen – bitte Text unten manuell markieren.", ok: done });
+                }}>Backup kopieren</button>
+                <textarea style={{ ...input, minHeight: 90, fontFamily: MONO, fontSize: 16, resize: "vertical" }} value={json} readOnly />
+              </>
+            ); })()}
+            {dt.show && dt.mode === "import" && (
+              <>
+                <textarea style={{ ...input, minHeight: 90, fontFamily: MONO, fontSize: 16, resize: "vertical" }} value={dt.txt} onChange={(e) => setDt({ ...dt, txt: e.target.value })} placeholder="Backup-Text hier einfügen…" />
+                <button style={btn(true)} onClick={() => { try { const p = JSON.parse(dt.txt); doImport(p); setDt({ show: false, mode: "import", txt: "", msg: "", ok: false }); } catch (e) { setDt({ ...dt, msg: "Das ist kein gültiges Backup – bitte den kompletten Export-Text einfügen.", ok: false }); } }}>Import speichern</button>
+              </>
+            )}
+            {dt.show && dt.msg && <p style={{ fontSize: 12, color: dt.ok ? C.green : C.red, margin: 0 }}>{dt.msg}</p>}
+          </div>
+
+          <Sec>Account</Sec>
+          <div style={{ ...card(), display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 13, color: C.sub }}>Eingeloggt als {userEmail}</span>
+            <button style={btn()} onClick={onSignOut}>Abmelden</button>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -789,157 +891,6 @@ function ChessView({ data, up, back }) {
           <input style={{ ...input, flex: 1 }} type="number" placeholder={`Puzzle (${c.puzzle})`} value={v.puzzle} onChange={(e) => setV({ ...v, puzzle: e.target.value })} />
         </div>
         <button style={btn(true)} onClick={log}>Speichern</button>
-      </div>
-    </>
-  );
-}
-
-// ============================================================
-// ============================================================
-function Achievements({ data, up, doImport, onSignOut, userEmail }) {
-  const nw = latestNetWorth(data) || 0;
-  const [f, setF] = useState({ title: "", target: "" });
-  const [dt, setDt] = useState({ show: false, mode: "export", txt: "", msg: "", ok: false });
-  const now = new Date();
-  const [inc, setInc] = useState({ month: `${now.getFullYear()}-${pad(now.getMonth() + 1)}`, amount: "" });
-  const ult = data.achievements.ultimate;
-  const ultTarget = Number(ult.target) || 0;
-  const ultPct = ultTarget > 0 ? Math.min(100, Math.round((nw / ultTarget) * 100)) : null;
-  const isDone = (a) => a.done || (a.target !== "" && Number(a.target) > 0 && nw >= Number(a.target));
-  const nwHistory = [...(data.finance.netWorthHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
-
-  const incEntries = [...(data.income?.entries || [])].sort((a, b) => b.month.localeCompare(a.month));
-  const incBest = incEntries.reduce((m, e) => Math.max(m, e.amount), 0);
-  const incTarget = data.income?.target || 10000;
-  const incPct = Math.min(100, Math.round((incBest / incTarget) * 100));
-  const incSteps = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
-  const addIncome = () => { if (!Number(inc.amount)) return; up((d) => { d.income = d.income || { target: 10000, entries: [] }; d.income.entries.push({ id: Date.now(), month: inc.month, amount: Number(inc.amount) }); return d; }); setInc({ ...inc, amount: "" }); };
-
-  return (
-    <>
-      <H1>Erfolge</H1>
-
-      {/* Ultimate goal: net worth */}
-      <div style={hiCard({ marginBottom: 12 })}>
-        <div style={{ fontSize: 10.5, fontWeight: 800, color: C.green, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Ultimatives Ziel · Net Worth</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8 }}>
-          <input style={input} value={ult.title} onChange={(e) => up((d) => { d.achievements.ultimate.title = e.target.value; return d; })} />
-          <input style={input} type="number" placeholder="Ziel €" value={ult.target} onChange={(e) => up((d) => { d.achievements.ultimate.target = e.target.value; return d; })} />
-        </div>
-        {ultPct != null && (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.sub, margin: "12px 2px 6px" }}>
-              <span style={num}>{eur(nw)}</span><span style={{ color: C.green, fontWeight: 800, ...glow, ...num }}>{ultPct} %</span><span style={num}>{eur(ultTarget)}</span>
-            </div>
-            <Bar pct={ultPct} />
-          </>
-        )}
-        {nwHistory.length > 1 ? (
-          <div style={{ marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height={130}>
-              <LineChart data={nwHistory.map((h) => ({ name: h.date.slice(5), NW: h.value }))} margin={{ top: 4, right: 6, bottom: 0, left: -14 }}>
-                {grid}
-                <XAxis dataKey="name" stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} domain={["dataMin - 500", "auto"]} />
-                <Tooltip contentStyle={tt} formatter={(v) => [eur(v), "Net Worth"]} />
-                <Line type="monotone" dataKey="NW" stroke={C.green} strokeWidth={2.5} dot={{ r: 2.5, fill: C.green }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div style={{ fontSize: 12, color: C.faint, marginTop: 10 }}>Net Worth im Geld-Bereich aktualisieren, dann wächst hier der Graph mit Hoch und Runter.</div>
-        )}
-      </div>
-
-      {/* Income ladder */}
-      <div style={hiCard({ marginBottom: 12 })}>
-        <div style={{ fontSize: 10.5, fontWeight: 800, color: C.green, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: 8 }}>Einkommen · 10k netto in einem Monat</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: C.green, ...glow, ...num }}>{eur(incBest)}</span>
-          <span style={{ fontSize: 12.5, color: C.sub }}>bester Monat · <span style={{ color: C.green, fontWeight: 800, ...num }}>{incPct} %</span></span>
-        </div>
-        <Bar pct={incPct} />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "12px 0" }}>
-          {incSteps.map((s) => { const hit = incBest >= s; return (
-            <span key={s} style={{ fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 999, color: hit ? "#04110A" : C.sub, background: hit ? C.green : "rgba(255,255,255,0.06)", boxShadow: hit ? "0 0 11px rgba(74,222,128,0.4)" : "none", ...num }}>{hit ? "✓ " : ""}{s / 1000}k</span>
-          ); })}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input style={{ ...input, flex: 1 }} type="month" value={inc.month} onChange={(e) => setInc({ ...inc, month: e.target.value })} />
-          <input style={{ ...input, flex: 1 }} type="number" placeholder="Netto €" value={inc.amount} onChange={(e) => setInc({ ...inc, amount: e.target.value })} />
-          <button style={btn(true)} onClick={addIncome}>+</button>
-        </div>
-        {incEntries.length > 0 && (
-          <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
-            {incEntries.slice(0, 6).map((e) => (
-              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px" }}>
-                <span>{MONTHS[Number(e.month.slice(5, 7)) - 1]} {e.month.slice(0, 4)}</span>
-                <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <span style={{ color: C.text, fontWeight: 700, ...num }}>{eur(e.amount)}</span>
-                  <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => up((d) => { d.income.entries = d.income.entries.filter((x) => x.id !== e.id); return d; })}>✕</button>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Badge grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {data.achievements.items.map((a) => { const d1 = isDone(a); return (
-          <div key={a.id} style={card({ padding: 13, border: d1 ? `1px solid ${C.borderGlow}` : `1px solid ${C.border}`, background: d1 ? "rgba(74,222,128,0.08)" : C.card, boxShadow: d1 ? "0 0 22px rgba(74,222,128,0.12)" : "none", opacity: d1 ? 1 : 0.72 })}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-              <div style={{ fontSize: 20 }}>{d1 ? "🏆" : "🔒"}</div>
-              <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer", fontSize: 12 }} onClick={() => up((d) => { d.achievements.items = d.achievements.items.filter((x) => x.id !== a.id); return d; })}>✕</button>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6, color: d1 ? C.text : C.sub }}>{a.title}</div>
-            {a.target !== "" && Number(a.target) > 0 ? (
-              <div style={{ fontSize: 12, color: d1 ? C.green : C.faint, marginTop: 3, fontWeight: 700, ...num }}>{eur(Number(a.target))}</div>
-            ) : (
-              <button style={{ ...btn(d1), padding: "5px 11px", fontSize: 12, marginTop: 8 }} onClick={() => up((d) => { const x = d.achievements.items.find((y) => y.id === a.id); x.done = !x.done; return d; })}>{d1 ? "Erreicht ✓" : "Abhaken"}</button>
-            )}
-          </div>
-        ); })}
-      </div>
-
-      <div style={card({ display: "grid", gridTemplateColumns: "1fr 90px 60px", gap: 8, marginTop: 10, padding: 12 })}>
-        <input style={input} placeholder="Neuer Erfolg" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
-        <input style={input} type="number" placeholder="€ opt." value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} />
-        <button style={btn(true)} onClick={() => { if (!f.title.trim()) return; up((d) => { d.achievements.items.push({ id: Date.now(), title: f.title, target: f.target, done: false }); return d; }); setF({ title: "", target: "" }); }}>+</button>
-      </div>
-      <p style={{ fontSize: 11.5, color: C.faint, margin: "8px 4px 0" }}>Mit €-Betrag hakt sich der Erfolg automatisch ab, sobald dein Net Worth ihn erreicht.</p>
-
-      <Sec>Daten-Backup</Sec>
-      <div style={card({ display: "grid", gap: 8 })}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ ...btn(dt.show && dt.mode === "export"), flex: 1 }} onClick={() => setDt({ show: true, mode: "export", txt: "", msg: "", ok: false })}>Exportieren</button>
-          <button style={{ ...btn(dt.show && dt.mode === "import"), flex: 1 }} onClick={() => setDt({ show: true, mode: "import", txt: "", msg: "", ok: false })}>Importieren</button>
-        </div>
-        {dt.show && dt.mode === "export" && (() => { const json = JSON.stringify(data); const days = Object.keys((data.habits && data.habits.checks) || {}).length; return (
-          <>
-            <div style={{ fontSize: 12, color: C.sub }}>Live-Stand: {data.finance.entries.length} Investitionen · {days} Habit-Tage · {((data.training && data.training.sessions) || []).length} Sessions · {((data.fitness.weight && data.fitness.weight.entries) || []).length} Gewichtseinträge · {data.habits.list.length} Habits</div>
-            <button style={btn(true)} onClick={async () => {
-              let done = false;
-              try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(json); done = true; } } catch (e) {}
-              if (!done) { try { const ta = document.createElement("textarea"); ta.value = json; document.body.appendChild(ta); ta.select(); done = document.execCommand("copy"); document.body.removeChild(ta); } catch (e) {} }
-              setDt({ ...dt, msg: done ? "Kopiert ✓ – jetzt in deine Notizen einfügen." : "Kopieren fehlgeschlagen – bitte Text unten manuell markieren.", ok: done });
-            }}>Backup kopieren</button>
-            <textarea style={{ ...input, minHeight: 90, fontFamily: MONO, fontSize: 16, resize: "vertical" }} value={json} readOnly />
-          </>
-        ); })()}
-        {dt.show && dt.mode === "import" && (
-          <>
-            <textarea style={{ ...input, minHeight: 90, fontFamily: MONO, fontSize: 16, resize: "vertical" }} value={dt.txt} onChange={(e) => setDt({ ...dt, txt: e.target.value })} placeholder="Backup-Text hier einfügen…" />
-            <button style={btn(true)} onClick={() => { try { const p = JSON.parse(dt.txt); doImport(p); setDt({ show: false, mode: "import", txt: "", msg: "", ok: false }); } catch (e) { setDt({ ...dt, msg: "Das ist kein gültiges Backup – bitte den kompletten Export-Text einfügen.", ok: false }); } }}>Import speichern</button>
-          </>
-        )}
-        {dt.show && dt.msg && <p style={{ fontSize: 12, color: dt.ok ? C.green : C.red, margin: 0 }}>{dt.msg}</p>}
-      </div>
-
-      <Sec>Account</Sec>
-      <div style={{ ...card(), display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 13, color: C.sub }}>Eingeloggt als {userEmail}</span>
-        <button style={btn()} onClick={onSignOut}>Abmelden</button>
       </div>
     </>
   );
