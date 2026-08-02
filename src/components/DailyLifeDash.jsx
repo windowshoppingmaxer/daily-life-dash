@@ -125,6 +125,7 @@ const seed = {
       { id: "bf1_330", catId: "breakfast", name: "Protein Drink (330ml)", kcal: 221, protein: 35, fat: 1, carbs: 17 },
     ],
     entries: [],
+    burns: [],
   },
 };
 
@@ -150,6 +151,7 @@ function mergeData(p) {
       categories: (p.food && p.food.categories) || seed.food.categories,
       meals: (p.food && p.food.meals) || seed.food.meals,
       entries: (p.food && p.food.entries) || [],
+      burns: (p.food && p.food.burns) || [],
     },
   };
 }
@@ -1226,11 +1228,16 @@ function Food({ data, up }) {
   const [editLib, setEditLib] = useState(false);
   const [libCat, setLibCat] = useState(cats[0] ? cats[0].id : "");
   const [newMeal, setNewMeal] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+  const [showBurn, setShowBurn] = useState(false);
+  const [burnForm, setBurnForm] = useState({ activity: "", kcal: "" });
 
   const todays = fd.entries.filter((e) => e.date === viewKey);
+  const todaysBurns = fd.burns.filter((b) => b.date === viewKey);
   const sum = (key) => todays.reduce((a, e) => a + (Number(e[key]) || 0), 0);
   const eaten = { kcal: sum("kcal"), protein: sum("protein"), fat: sum("fat"), carbs: sum("carbs") };
-  const remaining = Math.max(0, fd.target.kcal - eaten.kcal);
+  const burned = todaysBurns.reduce((a, b) => a + (Number(b.kcal) || 0), 0);
+  const effectiveTarget = fd.target.kcal + burned;
+  const remaining = Math.max(0, effectiveTarget - eaten.kcal);
 
   const logMeal = (m, catId) => { up((d) => { d.food.entries.push({ id: Date.now(), date: viewKey, catId, mealId: m.id, name: m.name, kcal: m.kcal, protein: m.protein, fat: m.fat, carbs: m.carbs }); return d; }); };
   const logCustom = (catId) => {
@@ -1249,13 +1256,23 @@ function Food({ data, up }) {
   };
   const removeMeal = (id) => up((d) => { d.food.meals = d.food.meals.filter((m) => m.id !== id); return d; });
 
+  const logBurn = () => {
+    const kcal = Number(burnForm.kcal) || 0;
+    if (!burnForm.activity.trim() || !kcal) return;
+    up((d) => { d.food.burns.push({ id: Date.now(), date: viewKey, activity: burnForm.activity.trim(), kcal }); return d; });
+    setBurnForm({ activity: "", kcal: "" });
+  };
+  const removeBurn = (id) => up((d) => { d.food.burns = d.food.burns.filter((b) => b.id !== id); return d; });
+
   const dayRating = (dateKey) => {
     const dayEntries = fd.entries.filter((e) => e.date === dateKey);
     if (!dayEntries.length) return null;
     const kcal = dayEntries.reduce((a, e) => a + (Number(e.kcal) || 0), 0);
     const protein = dayEntries.reduce((a, e) => a + (Number(e.protein) || 0), 0);
+    const dayBurned = fd.burns.filter((b) => b.date === dateKey).reduce((a, b) => a + (Number(b.kcal) || 0), 0);
+    const dayTarget = fd.target.kcal + dayBurned;
     const pPct = fd.target.protein ? protein / fd.target.protein : 0;
-    const kPct = fd.target.kcal ? kcal / fd.target.kcal : 0;
+    const kPct = dayTarget ? kcal / dayTarget : 0;
     if (pPct < 0.6) return "red";
     if (pPct < 0.9 || kPct > 1.2) return "orange";
     return "green";
@@ -1329,12 +1346,12 @@ function Food({ data, up }) {
       })() : (
       <>
       <div style={hiCard({ marginBottom: 12, textAlign: "center", padding: "22px 15px" })}>
-        <Ring pct={(eaten.kcal / (fd.target.kcal || 1)) * 100}>
+        <Ring pct={(eaten.kcal / (effectiveTarget || 1)) * 100}>
           <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>Übrig heute</div>
           <div style={{ fontSize: 34, fontWeight: 800, color: C.green, ...glow, ...num, margin: "2px 0" }}>{remaining}</div>
-          <div style={{ fontSize: 11.5, color: C.faint }}>von {fd.target.kcal} kcal</div>
+          <div style={{ fontSize: 11.5, color: C.faint }}>von {effectiveTarget} kcal{burned > 0 ? ` (+${burned})` : ""}</div>
         </Ring>
-        <div style={{ fontSize: 12, color: C.sub, margin: "14px 0 4px" }}>Verzehrt <span style={{ color: C.text, fontWeight: 700 }}>{Math.round(eaten.kcal)}</span> kcal</div>
+        <div style={{ fontSize: 12, color: C.sub, margin: "14px 0 4px" }}>Verzehrt <span style={{ color: C.text, fontWeight: 700 }}>{Math.round(eaten.kcal)}</span> kcal{burned > 0 && <> · <span style={{ color: C.flame, fontWeight: 700 }}>+{burned}</span> verbrannt</>}</div>
         {editT ? (
           <div style={{ display: "grid", gap: 8, textAlign: "left", marginTop: 10 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -1354,6 +1371,39 @@ function Food({ data, up }) {
         <MacroBar label="Kohlenhydrate" val={eaten.carbs} target={fd.target.carbs} color="#6EA8FF" />
         <MacroBar label="Protein" val={eaten.protein} target={fd.target.protein} color={C.green} />
         <MacroBar label="Fett" val={eaten.fat} target={fd.target.fat} color="#FF9F0A" />
+      </div>
+
+      <div style={card({ padding: 14, marginBottom: 12 })}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setShowBurn(!showBurn)}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 15 }}><span style={{ fontSize: 18 }}>🔥</span> Aktivität</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {burned > 0 && <span style={{ fontSize: 12, color: C.flame, fontWeight: 700, ...num }}>+{burned} kcal</span>}
+            <span style={{ width: 26, height: 26, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: showBurn ? "#04110A" : C.sub, background: showBurn ? C.green : "rgba(255,255,255,0.06)", boxShadow: showBurn ? "0 0 12px rgba(74,222,128,0.4)" : "none" }}>{showBurn ? "–" : "+"}</span>
+          </span>
+        </div>
+        {todaysBurns.length > 0 && (
+          <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
+            {todaysBurns.map((b) => (
+              <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px" }}>
+                <span>{b.activity}</span>
+                <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ color: C.text, fontWeight: 700, ...num }}>+{Math.round(b.kcal)} kcal</span>
+                  <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => removeBurn(b.id)}>✕</button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {showBurn && (
+          <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+            <p style={{ fontSize: 11.5, color: C.faint, margin: 0 }}>Nur zusätzliche Aktivität eintragen (z.B. intensives Basketball) — dein normales Alltagsradeln steckt schon in deinem Kalorienziel. Grobe Faustregel reicht, lieber konservativ schätzen.</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...input, flex: 1.4 }} placeholder="Was? (z.B. Basketball 2h)" value={burnForm.activity} onChange={(e) => setBurnForm({ ...burnForm, activity: e.target.value })} />
+              <input style={{ ...input, flex: 1 }} type="number" placeholder="kcal" value={burnForm.kcal} onChange={(e) => setBurnForm({ ...burnForm, kcal: e.target.value })} />
+            </div>
+            <button style={btn(true)} onClick={logBurn}>Hinzufügen</button>
+          </div>
+        )}
       </div>
 
       <Sec right={<button style={{ ...btn(), padding: "5px 12px", fontSize: 12 }} onClick={() => setEditLib(!editLib)}>{editLib ? "Fertig" : "Meals bearbeiten"}</button>}>Essensprotokoll</Sec>
