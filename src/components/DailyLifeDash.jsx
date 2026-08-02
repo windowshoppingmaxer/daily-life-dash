@@ -1199,14 +1199,8 @@ function Training({ data, up }) {
 
 const FOOD_ICON = { breakfast: "🍳", lunch: "🥗", dinner: "🍲", snack: "🍎", other: "🍽️" };
 
-// Grobe kcal/Stunde-Faustwerte (bezogen auf ~70-75kg), nicht individuell kalibriert
-const ACTIVITIES = [
-  { id: "basketball", name: "Basketball", rates: { Locker: 350, Moderat: 550, Intensiv: 750 } },
-  { id: "laufen", name: "Laufen/Joggen", rates: { Locker: 450, Moderat: 600, Intensiv: 800 } },
-  { id: "rad", name: "Rad (zusätzlich/intensiv)", rates: { Locker: 300, Moderat: 450, Intensiv: 650 } },
-  { id: "workout", name: "Workout/Kraft", rates: { Locker: 250, Moderat: 350, Intensiv: 450 } },
-  { id: "wandern", name: "Wandern", rates: { Locker: 300, Moderat: 400, Intensiv: 500 } },
-];
+// Bewusst konservative kcal/Stunde-Faustwerte, unabhängig von der Sportart — lieber unter- als überschätzen
+const INTENSITY_RATES = { Locker: 200, Moderat: 350, Intensiv: 500 };
 
 const Ring = ({ pct, size = 176, stroke = 15, color = C.green, children }) => (
   <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} ${Math.min(100, Math.max(0, pct)) * 3.6}deg, rgba(255,255,255,0.07) 0deg)`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", boxShadow: `0 0 34px rgba(74,222,128,0.18)`, transition: "background 0.5s ease" }}>
@@ -1238,9 +1232,7 @@ function Food({ data, up }) {
   const [libCat, setLibCat] = useState(cats[0] ? cats[0].id : "");
   const [newMeal, setNewMeal] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
   const [showBurn, setShowBurn] = useState(false);
-  const [burnMode, setBurnMode] = useState("preset"); // preset | custom
-  const [burnForm, setBurnForm] = useState({ activityId: ACTIVITIES[0].id, intensity: "Moderat", hours: "1" });
-  const [customBurn, setCustomBurn] = useState({ activity: "", kcal: "" });
+  const [burnForm, setBurnForm] = useState({ activity: "", intensity: "Moderat", minutes: "60" });
 
   const todays = fd.entries.filter((e) => e.date === viewKey);
   const todaysBurns = fd.burns.filter((b) => b.date === viewKey);
@@ -1267,19 +1259,13 @@ function Food({ data, up }) {
   };
   const removeMeal = (id) => up((d) => { d.food.meals = d.food.meals.filter((m) => m.id !== id); return d; });
 
-  const burnActivity = ACTIVITIES.find((a) => a.id === burnForm.activityId) || ACTIVITIES[0];
-  const burnHours = Number(String(burnForm.hours).replace(",", ".")) || 0;
-  const burnPresetKcal = Math.round(burnActivity.rates[burnForm.intensity] * burnHours);
-  const logBurnPreset = () => {
-    if (!burnHours || !burnPresetKcal) return;
-    up((d) => { d.food.burns.push({ id: Date.now(), date: viewKey, activity: `${burnActivity.name} · ${burnForm.intensity}, ${burnHours}h`, kcal: burnPresetKcal }); return d; });
-    setBurnForm({ ...burnForm, hours: "1" });
-  };
-  const logBurnCustom = () => {
-    const kcal = Number(customBurn.kcal) || 0;
-    if (!customBurn.activity.trim() || !kcal) return;
-    up((d) => { d.food.burns.push({ id: Date.now(), date: viewKey, activity: customBurn.activity.trim(), kcal }); return d; });
-    setCustomBurn({ activity: "", kcal: "" });
+  const burnMinutes = Number(String(burnForm.minutes).replace(",", ".")) || 0;
+  const burnKcal = Math.round(INTENSITY_RATES[burnForm.intensity] * (burnMinutes / 60));
+  const logBurn = () => {
+    if (!burnMinutes || !burnKcal) return;
+    const label = burnForm.activity.trim() || burnForm.intensity;
+    up((d) => { d.food.burns.push({ id: Date.now(), date: viewKey, activity: `${label} · ${burnForm.intensity}, ${burnMinutes}min`, kcal: burnKcal }); return d; });
+    setBurnForm({ ...burnForm, activity: "", minutes: "60" });
   };
   const removeBurn = (id) => up((d) => { d.food.burns = d.food.burns.filter((b) => b.id !== id); return d; });
 
@@ -1416,28 +1402,13 @@ function Food({ data, up }) {
         {showBurn && (
           <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
             <p style={{ fontSize: 11.5, color: C.faint, margin: 0 }}>Nur zusätzliche Aktivität eintragen (z.B. intensives Basketball) — dein normales Alltagsradeln steckt schon in deinem Kalorienziel. Grobe Faustregel reicht, lieber konservativ schätzen.</p>
-            <Seg options={["Auswählen", "Frei eintragen"]} value={burnMode === "preset" ? "Auswählen" : "Frei eintragen"} onChange={(v) => setBurnMode(v === "Auswählen" ? "preset" : "custom")} />
-            {burnMode === "preset" ? (
-              <>
-                <select style={{ ...input, padding: "10px 12px" }} value={burnForm.activityId} onChange={(e) => setBurnForm({ ...burnForm, activityId: e.target.value })}>
-                  {ACTIVITIES.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-                <Seg options={["Locker", "Moderat", "Intensiv"]} value={burnForm.intensity} onChange={(v) => setBurnForm({ ...burnForm, intensity: v })} />
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input style={{ ...input, flex: 1 }} inputMode="decimal" placeholder="Dauer in Std., z.B. 1,5" value={burnForm.hours} onChange={(e) => setBurnForm({ ...burnForm, hours: e.target.value })} />
-                  <span style={{ fontSize: 13, color: C.sub, whiteSpace: "nowrap" }}>≈ <span style={{ color: C.flame, fontWeight: 700, ...num }}>{burnPresetKcal || 0}</span> kcal</span>
-                </div>
-                <button style={btn(true)} onClick={logBurnPreset}>Hinzufügen</button>
-              </>
-            ) : (
-              <>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input style={{ ...input, flex: 1.4 }} placeholder="Was?" value={customBurn.activity} onChange={(e) => setCustomBurn({ ...customBurn, activity: e.target.value })} />
-                  <input style={{ ...input, flex: 1 }} type="number" placeholder="kcal" value={customBurn.kcal} onChange={(e) => setCustomBurn({ ...customBurn, kcal: e.target.value })} />
-                </div>
-                <button style={btn(true)} onClick={logBurnCustom}>Hinzufügen</button>
-              </>
-            )}
+            <Seg options={["Locker", "Moderat", "Intensiv"]} value={burnForm.intensity} onChange={(v) => setBurnForm({ ...burnForm, intensity: v })} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input style={{ ...input, flex: 1 }} inputMode="numeric" placeholder="Minuten, z.B. 90" value={burnForm.minutes} onChange={(e) => setBurnForm({ ...burnForm, minutes: e.target.value })} />
+              <span style={{ fontSize: 13, color: C.sub, whiteSpace: "nowrap" }}>≈ <span style={{ color: C.flame, fontWeight: 700, ...num }}>{burnKcal || 0}</span> kcal</span>
+            </div>
+            <input style={{ ...input, padding: "9px 10px", fontSize: 14 }} placeholder="Was war's? (optional)" value={burnForm.activity} onChange={(e) => setBurnForm({ ...burnForm, activity: e.target.value })} />
+            <button style={btn(true)} onClick={logBurn}>Hinzufügen</button>
           </div>
         )}
       </div>
