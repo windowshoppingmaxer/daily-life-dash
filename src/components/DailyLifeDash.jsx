@@ -1226,7 +1226,7 @@ function Food({ data, up }) {
     const dayTarget = fd.target.kcal + dayBurned;
     const pPct = fd.target.protein ? protein / fd.target.protein : 0;
     const kPct = dayTarget ? kcal / dayTarget : 0;
-    if (pPct < 0.6) return "red";
+    if (pPct < 0.7) return "red";
     if (pPct < 0.9 || kPct > 1.2) return "orange";
     return "green";
   };
@@ -1293,7 +1293,7 @@ function Food({ data, up }) {
               <span><span style={{ color: C.flame }}>●</span> {counts.orange} okay</span>
               <span><span style={{ color: C.red }}>●</span> {counts.red} schwach</span>
             </div>
-            <p style={{ fontSize: 11.5, color: C.faint, textAlign: "center", margin: "6px 4px 0" }}>Grün = Protein-Ziel erreicht. Orange = Protein knapp verfehlt oder Kalorien deutlich drüber (&gt;120%). Rot = Protein stark verfehlt (&lt;60%).</p>
+            <p style={{ fontSize: 11.5, color: C.faint, textAlign: "center", margin: "6px 4px 0" }}>Grün = Protein-Ziel erreicht. Orange = Protein knapp verfehlt oder Kalorien deutlich drüber (&gt;120%). Rot = Protein stark verfehlt (&lt;70%).</p>
           </>
         );
       })() : (
