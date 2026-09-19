@@ -1164,8 +1164,36 @@ function Training({ data, up }) {
             ) : (
               <p style={{ fontSize: 12, color: C.faint, margin: "0 8px 6px" }}>Ab der zweiten Session mit dieser Übung wächst hier die Kurve.</p>
             )}
-            {prog.length > 1 && <p style={{ fontSize: 11, color: C.faint, margin: "6px 8px 0" }}>Kraft-Score verrechnet Körpergewicht, Zusatzgewicht und Wiederholungen – mehr Gewicht bei weniger Wdh. zeigt trotzdem Fortschritt.</p>}
           </div>
+          {selEx && (() => {
+            const items = sessions.flatMap((s) => (s.items || []).filter((i) => i.name === selEx && i.reps && i.reps.length).map((i) => ({ ...i, date: s.date })));
+            if (!items.length) return null;
+            const loadOf = (it) => (isPureWeightEx(it.name) ? (it.kg || 0) : bodyweight + (it.kg || 0));
+            const weighted = items.filter((it) => it.kg);
+            const heaviestWeight = weighted.length ? Math.max(...weighted.map((it) => it.kg)) : null;
+            const best1RM = Math.round(Math.max(...items.map(kraftScore)));
+            const bestSetVolume = Math.round(Math.max(...items.map((it) => loadOf(it) * Math.max(...it.reps))));
+            const sessionVolumes = {};
+            items.forEach((it) => { sessionVolumes[it.date] = (sessionVolumes[it.date] || 0) + loadOf(it) * it.reps.reduce((a, b) => a + b, 0); });
+            const bestSessionVolume = Math.round(Math.max(...Object.values(sessionVolumes)));
+            const rows = [
+              ["Schwerstes Gewicht", heaviestWeight != null ? `${String(heaviestWeight).replace(".", ",")} kg` : "–"],
+              ["Beste 1 Wiederholung", String(best1RM)],
+              ["Bestes Satzvolumen", String(bestSetVolume)],
+              ["Bestes Sitzungsvolumen", String(bestSessionVolume)],
+            ];
+            return (
+              <div style={card({ padding: "12px 14px", marginTop: 10 })}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.sub, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>🏅 Persönliche Rekorde · {selEx}</div>
+                {rows.map(([label, val]) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: 13.5, color: C.text }}>{label}</span>
+                    <span style={{ ...num, fontWeight: 800, color: C.green }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </>
       )}
 
