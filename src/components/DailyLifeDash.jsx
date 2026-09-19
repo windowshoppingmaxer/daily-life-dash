@@ -122,6 +122,21 @@ const seed = {
       { id: "pm8_d500", catId: "dinner", name: "Protein Pasta Bolognese (500g)", kcal: 630, protein: 43, fat: 16, carbs: 75 },
       { id: "pm8_d1000", catId: "dinner", name: "Protein Pasta Bolognese (1kg)", kcal: 1260, protein: 86, fat: 32, carbs: 150 },
 
+      { id: "pm9_l500", catId: "lunch", name: "Paella (500g)", kcal: 490, protein: 40, fat: 15, carbs: 45 },
+      { id: "pm9_l1000", catId: "lunch", name: "Paella (1kg)", kcal: 980, protein: 80, fat: 29, carbs: 90 },
+      { id: "pm9_d500", catId: "dinner", name: "Paella (500g)", kcal: 490, protein: 40, fat: 15, carbs: 45 },
+      { id: "pm9_d1000", catId: "dinner", name: "Paella (1kg)", kcal: 980, protein: 80, fat: 29, carbs: 90 },
+
+      { id: "pm10_l500", catId: "lunch", name: "Aziatische Noedels in Pindasaus (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
+      { id: "pm10_l1000", catId: "lunch", name: "Aziatische Noedels in Pindasaus (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
+      { id: "pm10_d500", catId: "dinner", name: "Aziatische Noedels in Pindasaus (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
+      { id: "pm10_d1000", catId: "dinner", name: "Aziatische Noedels in Pindasaus (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
+
+      { id: "pm11_l500", catId: "lunch", name: "Gebakken Rijst in Pindasaus (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
+      { id: "pm11_l1000", catId: "lunch", name: "Gebakken Rijst in Pindasaus (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
+      { id: "pm11_d500", catId: "dinner", name: "Gebakken Rijst in Pindasaus (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
+      { id: "pm11_d1000", catId: "dinner", name: "Gebakken Rijst in Pindasaus (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
+
       { id: "bf1_330", catId: "breakfast", name: "Protein Drink (330ml)", kcal: 221, protein: 35, fat: 1, carbs: 17 },
     ],
     entries: [],
@@ -1149,6 +1164,11 @@ function Training({ data, up }) {
 }
 
 const FOOD_ICON = { breakfast: "🍳", lunch: "🥗", dinner: "🍲", snack: "🍎", other: "🍽️" };
+// Erkennt "Name (Größe)" in Meal-Namen, damit die Auswahl zweistufig (erst Gericht, dann Größe) sein kann
+const parseMealName = (name) => {
+  const m = name.match(/^(.*) \(([^()]+)\)$/);
+  return m ? { base: m[1], size: m[2] } : { base: name, size: "" };
+};
 
 // Bewusst konservative kcal/Stunde-Faustwerte, unabhängig von der Sportart — lieber unter- als überschätzen
 
@@ -1174,6 +1194,7 @@ function Food({ data, up }) {
   const [mOff, setMOff] = useState(0);
   const [openCat, setOpenCat] = useState(null);
   const [sel, setSel] = useState({});
+  const [selSize, setSelSize] = useState({});
   const [showCustom, setShowCustom] = useState({});
   const [custom, setCustom] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
   const [editT, setEditT] = useState(false);
@@ -1389,7 +1410,15 @@ function Food({ data, up }) {
             const catMeals = fd.meals.filter((m) => m.catId === c.id);
             const catEntries = todays.filter((e) => e.catId === c.id);
             const isOpen = openCat === c.id;
-            const selMeal = catMeals.find((m) => m.id === sel[c.id]) || catMeals[0];
+            const mealGroups = {};
+            catMeals.forEach((m) => {
+              const { base, size } = parseMealName(m.name);
+              (mealGroups[base] = mealGroups[base] || []).push({ ...m, size });
+            });
+            const baseNames = Object.keys(mealGroups);
+            const curBase = mealGroups[sel[c.id]] ? sel[c.id] : baseNames[0];
+            const variants = mealGroups[curBase] || [];
+            const selMeal = variants.find((v) => v.id === selSize[c.id]) || variants[0];
             return (
               <div key={c.id} style={card({ padding: 14, border: isOpen ? `1px solid rgba(74,222,128,0.25)` : `1px solid ${C.border}` })}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setOpenCat(isOpen ? null : c.id)}>
@@ -1417,21 +1446,26 @@ function Food({ data, up }) {
                 {isOpen && (
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {catMeals.length > 0 && (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <select
-                          style={{ ...input, flex: 1, padding: "10px 12px" }}
-                          value={selMeal ? selMeal.id : ""}
-                          onChange={(e) => setSel({ ...sel, [c.id]: e.target.value })}
-                        >
-                          {catMeals.map((m) => (
-                            <option key={m.id} value={m.id}>{m.name} · {m.kcal} kcal</option>
-                          ))}
-                        </select>
-                        <button style={btn(true)} onClick={() => selMeal && logMeal(selMeal, c.id)}>+</button>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <select
+                            style={{ ...input, flex: 1, padding: "10px 12px" }}
+                            value={curBase || ""}
+                            onChange={(e) => setSel({ ...sel, [c.id]: e.target.value })}
+                          >
+                            {baseNames.map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                          <button style={btn(true)} onClick={() => selMeal && logMeal(selMeal, c.id)}>+</button>
+                        </div>
+                        {variants.length > 1 && (
+                          <Seg options={variants.map((v) => v.size)} value={selMeal ? selMeal.size : variants[0].size} onChange={(sz) => { const v = variants.find((x) => x.size === sz); if (v) setSelSize({ ...selSize, [c.id]: v.id }); }} />
+                        )}
                       </div>
                     )}
                     {selMeal && (
-                      <div style={{ fontSize: 11.5, color: C.faint, padding: "0 2px" }}>P {selMeal.protein}g · F {selMeal.fat}g · Kh {selMeal.carbs}g</div>
+                      <div style={{ fontSize: 11.5, color: C.faint, padding: "0 2px" }}>{selMeal.kcal} kcal · P {selMeal.protein}g · F {selMeal.fat}g · Kh {selMeal.carbs}g</div>
                     )}
                     <button
                       style={{ border: "none", background: "transparent", color: C.sub, cursor: "pointer", fontSize: 12, padding: "6px 0", textAlign: "left" }}
