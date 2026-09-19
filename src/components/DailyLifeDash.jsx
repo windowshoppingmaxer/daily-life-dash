@@ -1000,8 +1000,13 @@ function Training({ data, up }) {
 
   const weightEntries = (data.fitness.weight && data.fitness.weight.entries) || [];
   const bodyweight = weightEntries.length ? [...weightEntries].sort((a, b) => a.date.localeCompare(b.date)).slice(-1)[0].value : 75;
-  // Kraft-Score statt roher Wiederholungen: mehr Zusatzgewicht bei weniger Wdh. zeigt trotzdem Fortschritt (Epley-artige Schätzung)
-  const kraftScore = (it) => (bodyweight + (it.kg || 0)) * (1 + Math.max(...it.reps) / 30);
+  // Kraft-Score (Epley-artige e1RM-Schätzung, wie z.B. bei Hevy): bei Körpergewichtsübungen zählt
+  // Körpergewicht + Zusatzgewicht als Last, bei reinen Hantelübungen (z.B. Seitheben) nur das Hantelgewicht.
+  const isPureWeightEx = (name) => name.toLowerCase().includes("seithe");
+  const kraftScore = (it) => {
+    const load = isPureWeightEx(it.name) ? (it.kg || 0) : bodyweight + (it.kg || 0);
+    return load * (1 + Math.max(...it.reps) / 30);
+  };
   const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps && i.reps.length).map((i) => i.name)))];
   const selEx = exNames.includes(exSel) ? exSel : exNames[0] || "";
   const prog = selEx ? sessions
