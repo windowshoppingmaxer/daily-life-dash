@@ -1009,16 +1009,15 @@ function Training({ data, up }) {
   const kraftScore = (it) => loadOf(it) * (1 + Math.max(...it.reps) / 30);
   const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps && i.reps.length).map((i) => i.name)))];
   const selEx = exNames.includes(exSel) ? exSel : exNames[0] || "";
-  const [metric, setMetric] = useState("kraft"); // kraft | gewicht | satz | sitzung
-  const metricLabel = { gewicht: "Gewicht (kg)", kraft: "Kraft-Score", satz: "Satzvolumen (kg)", sitzung: "Sitzungsvolumen (kg)" };
-  const metricShort = { gewicht: "Gewicht", kraft: "Kraft-Score", satz: "Satzvolumen", sitzung: "Sitzungsvolumen" };
+  const [metric, setMetric] = useState("satz"); // gewicht | satz | sitzung
+  const metricLabel = { gewicht: "Gewicht (kg)", satz: "Satzvolumen (kg)", sitzung: "Sitzungsvolumen (kg)" };
+  const metricShort = { gewicht: "Gewicht", satz: "Satzvolumen", sitzung: "Sitzungsvolumen" };
   const metricValue = (s) => {
     const items = (s.items || []).filter((i) => i.name === selEx && i.reps && i.reps.length);
     if (!items.length) return null;
     if (metric === "gewicht") return Math.max(...items.map((it) => it.kg || 0));
     if (metric === "satz") return Math.max(...items.map((it) => loadOf(it) * Math.max(...it.reps)));
-    if (metric === "sitzung") return items.reduce((sum, it) => sum + loadOf(it) * it.reps.reduce((a, b) => a + b, 0), 0);
-    return Math.max(...items.map(kraftScore));
+    return items.reduce((sum, it) => sum + loadOf(it) * it.reps.reduce((a, b) => a + b, 0), 0);
   };
   const prog = selEx ? sessions
     .map((s) => ({ d: s.date, v: metricValue(s) }))
