@@ -127,15 +127,15 @@ const seed = {
       { id: "pm9_d500", catId: "dinner", name: "Paella (500g)", kcal: 490, protein: 40, fat: 15, carbs: 45 },
       { id: "pm9_d1000", catId: "dinner", name: "Paella (1kg)", kcal: 980, protein: 80, fat: 29, carbs: 90 },
 
-      { id: "pm10_l500", catId: "lunch", name: "Aziatische Noedels in Pindasaus (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
-      { id: "pm10_l1000", catId: "lunch", name: "Aziatische Noedels in Pindasaus (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
-      { id: "pm10_d500", catId: "dinner", name: "Aziatische Noedels in Pindasaus (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
-      { id: "pm10_d1000", catId: "dinner", name: "Aziatische Noedels in Pindasaus (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
+      { id: "pm10_l500", catId: "lunch", name: "Asiatische Nudeln in Erdnusssauce (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
+      { id: "pm10_l1000", catId: "lunch", name: "Asiatische Nudeln in Erdnusssauce (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
+      { id: "pm10_d500", catId: "dinner", name: "Asiatische Nudeln in Erdnusssauce (500g)", kcal: 570, protein: 44, fat: 24, carbs: 42 },
+      { id: "pm10_d1000", catId: "dinner", name: "Asiatische Nudeln in Erdnusssauce (1kg)", kcal: 1140, protein: 87, fat: 48, carbs: 84 },
 
-      { id: "pm11_l500", catId: "lunch", name: "Gebakken Rijst in Pindasaus (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
-      { id: "pm11_l1000", catId: "lunch", name: "Gebakken Rijst in Pindasaus (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
-      { id: "pm11_d500", catId: "dinner", name: "Gebakken Rijst in Pindasaus (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
-      { id: "pm11_d1000", catId: "dinner", name: "Gebakken Rijst in Pindasaus (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
+      { id: "pm11_l500", catId: "lunch", name: "Gebratener Reis in Erdnusssauce (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
+      { id: "pm11_l1000", catId: "lunch", name: "Gebratener Reis in Erdnusssauce (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
+      { id: "pm11_d500", catId: "dinner", name: "Gebratener Reis in Erdnusssauce (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
+      { id: "pm11_d1000", catId: "dinner", name: "Gebratener Reis in Erdnusssauce (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
 
       { id: "bf1_330", catId: "breakfast", name: "Protein Drink (330ml)", kcal: 221, protein: 35, fat: 1, carbs: 17 },
     ],
@@ -164,13 +164,14 @@ function mergeData(p) {
       ...seed.food, ...(p.food || {}),
       target: { ...seed.food.target, ...((p.food && p.food.target) || {}) },
       categories: (p.food && p.food.categories) || seed.food.categories,
-      // Neue Gerichte aus dem Seed per id ergänzen, statt die gespeicherten Meals komplett zu ersetzen —
-      // sonst tauchen neu hinzugefügte Seed-Gerichte bei bestehenden Nutzern nie im Account auf.
+      // Seed-Gerichte (per id) kommen immer aus dem aktuellen Seed, damit Korrekturen (Name, Nährwerte)
+      // und neue Gerichte auch bei bestehenden Nutzern ankommen. Selbst angelegte Gerichte ("fm..."-ids,
+      // über "Eigenes Gericht" in der App) bleiben unangetastet, da sie nicht im Seed vorkommen.
       meals: (() => {
         const existing = (p.food && p.food.meals) || [];
         if (!existing.length) return seed.food.meals;
-        const ids = new Set(existing.map((x) => x.id));
-        return [...existing, ...seed.food.meals.filter((x) => !ids.has(x.id))];
+        const seedIds = new Set(seed.food.meals.map((x) => x.id));
+        return [...seed.food.meals, ...existing.filter((x) => !seedIds.has(x.id))];
       })(),
       entries: (p.food && p.food.entries) || [],
       burns: (p.food && p.food.burns) || [],
@@ -1000,20 +1001,30 @@ function Training({ data, up }) {
 
   const weightEntries = (data.fitness.weight && data.fitness.weight.entries) || [];
   const bodyweight = weightEntries.length ? [...weightEntries].sort((a, b) => a.date.localeCompare(b.date)).slice(-1)[0].value : 75;
-  // Kraft-Score (Epley-artige e1RM-Schätzung, wie z.B. bei Hevy): bei Körpergewichtsübungen zählt
-  // Körpergewicht + Zusatzgewicht als Last, bei reinen Hantelübungen (z.B. Seitheben) nur das Hantelgewicht.
+  // Bei Körpergewichtsübungen zählt Körpergewicht + Zusatzgewicht als Last, bei reinen
+  // Hantelübungen (z.B. Seitheben) nur das Hantelgewicht (wie bei Hevy für "gewichtete" vs. freie Übungen).
   const isPureWeightEx = (name) => name.toLowerCase().includes("seithe");
-  const kraftScore = (it) => {
-    const load = isPureWeightEx(it.name) ? (it.kg || 0) : bodyweight + (it.kg || 0);
-    return load * (1 + Math.max(...it.reps) / 30);
-  };
+  const loadOf = (it) => (isPureWeightEx(it.name) ? (it.kg || 0) : bodyweight + (it.kg || 0));
+  // Kraft-Score: Epley-artige e1RM-Schätzung (geschätztes Gewicht für 1 Wiederholung)
+  const kraftScore = (it) => loadOf(it) * (1 + Math.max(...it.reps) / 30);
   const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps && i.reps.length).map((i) => i.name)))];
   const selEx = exNames.includes(exSel) ? exSel : exNames[0] || "";
+  const [metric, setMetric] = useState("kraft"); // kraft | gewicht | satz | sitzung
+  const metricLabel = { gewicht: "Gewicht (kg)", kraft: "Kraft-Score", satz: "Satzvolumen (kg)", sitzung: "Sitzungsvolumen (kg)" };
+  const metricShort = { gewicht: "Gewicht", kraft: "Kraft-Score", satz: "Satzvolumen", sitzung: "Sitzungsvolumen" };
+  const metricValue = (s) => {
+    const items = (s.items || []).filter((i) => i.name === selEx && i.reps && i.reps.length);
+    if (!items.length) return null;
+    if (metric === "gewicht") return Math.max(...items.map((it) => it.kg || 0));
+    if (metric === "satz") return Math.max(...items.map((it) => loadOf(it) * Math.max(...it.reps)));
+    if (metric === "sitzung") return items.reduce((sum, it) => sum + loadOf(it) * it.reps.reduce((a, b) => a + b, 0), 0);
+    return Math.max(...items.map(kraftScore));
+  };
   const prog = selEx ? sessions
-    .filter((s) => (s.items || []).some((i) => i.name === selEx && i.reps && i.reps.length))
-    .map((s) => ({ d: s.date, v: Math.max(...s.items.filter((i) => i.name === selEx && i.reps && i.reps.length).map(kraftScore)) }))
+    .map((s) => ({ d: s.date, v: metricValue(s) }))
+    .filter((p) => p.v !== null)
     .sort((a, b) => a.d.localeCompare(b.d))
-    .map((p) => ({ name: `${p.d.slice(8, 10)}.${p.d.slice(5, 7)}.`, Kraft: Math.round(p.v) })) : [];
+    .map((p) => ({ name: `${p.d.slice(8, 10)}.${p.d.slice(5, 7)}.`, Wert: Math.round(p.v) })) : [];
 
   return (
     <>
@@ -1151,6 +1162,9 @@ function Training({ data, up }) {
                 <button key={n} style={{ ...btn(n === selEx), padding: "5px 11px", fontSize: 12 }} onClick={() => setExSel(n)}>{n}</button>
               ))}
             </div>
+            <div style={{ margin: "0 8px 10px" }}>
+              <Seg options={Object.values(metricShort)} value={metricShort[metric]} onChange={(l) => setMetric(Object.keys(metricShort).find((k) => metricShort[k] === l))} />
+            </div>
             {prog.length > 1 ? (
               <ResponsiveContainer width="100%" height={160}>
                 <LineChart data={prog} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
@@ -1158,17 +1172,16 @@ function Training({ data, up }) {
                   <XAxis dataKey="name" stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={tt} />
-                  <Line type="monotone" dataKey="Kraft" stroke={C.green} strokeWidth={2.5} dot={{ r: 3, fill: C.green }} />
+                  <Line type="monotone" dataKey="Wert" name={metricLabel[metric]} stroke={C.green} strokeWidth={2.5} dot={{ r: 3, fill: C.green }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <p style={{ fontSize: 12, color: C.faint, margin: "0 8px 6px" }}>Ab der zweiten Session mit dieser Übung wächst hier die Kurve.</p>
+              <p style={{ fontSize: 12, color: C.faint, margin: "0 8px 6px" }}>Ab der zweiten Session mit dieser Übung (bei dieser Messgröße) wächst hier die Kurve.</p>
             )}
           </div>
           {selEx && (() => {
             const items = sessions.flatMap((s) => (s.items || []).filter((i) => i.name === selEx && i.reps && i.reps.length).map((i) => ({ ...i, date: s.date })));
             if (!items.length) return null;
-            const loadOf = (it) => (isPureWeightEx(it.name) ? (it.kg || 0) : bodyweight + (it.kg || 0));
             const weighted = items.filter((it) => it.kg);
             const heaviestWeight = weighted.length ? Math.max(...weighted.map((it) => it.kg)) : null;
             const best1RM = Math.round(Math.max(...items.map(kraftScore)));
@@ -1178,9 +1191,9 @@ function Training({ data, up }) {
             const bestSessionVolume = Math.round(Math.max(...Object.values(sessionVolumes)));
             const rows = [
               ["Schwerstes Gewicht", heaviestWeight != null ? `${String(heaviestWeight).replace(".", ",")} kg` : "–"],
-              ["Beste 1 Wiederholung", String(best1RM)],
-              ["Bestes Satzvolumen", String(bestSetVolume)],
-              ["Bestes Sitzungsvolumen", String(bestSessionVolume)],
+              ["Beste 1 Wiederholung", `${best1RM} kg (geschätzt)`],
+              ["Bestes Satzvolumen", `${bestSetVolume} kg`],
+              ["Bestes Sitzungsvolumen", `${bestSessionVolume} kg`],
             ];
             return (
               <div style={card({ padding: "12px 14px", marginTop: 10 })}>
