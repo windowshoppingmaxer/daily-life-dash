@@ -164,7 +164,14 @@ function mergeData(p) {
       ...seed.food, ...(p.food || {}),
       target: { ...seed.food.target, ...((p.food && p.food.target) || {}) },
       categories: (p.food && p.food.categories) || seed.food.categories,
-      meals: (p.food && p.food.meals) || seed.food.meals,
+      // Neue Gerichte aus dem Seed per id ergänzen, statt die gespeicherten Meals komplett zu ersetzen —
+      // sonst tauchen neu hinzugefügte Seed-Gerichte bei bestehenden Nutzern nie im Account auf.
+      meals: (() => {
+        const existing = (p.food && p.food.meals) || [];
+        if (!existing.length) return seed.food.meals;
+        const ids = new Set(existing.map((x) => x.id));
+        return [...existing, ...seed.food.meals.filter((x) => !ids.has(x.id))];
+      })(),
       entries: (p.food && p.food.entries) || [],
       burns: (p.food && p.food.burns) || [],
     },
@@ -920,18 +927,31 @@ function Training({ data, up }) {
   const tr = data.training || { categories: [], sessions: [] };
   const cats = tr.categories || [];
   const tpls = tr.templates || [];
-  const [cat, setCat] = useState(cats[0] ? cats[0].id : "");
-  const [date, setDate] = useState(todayKey());
-  const [rows, setRows] = useState([{ name: "", reps: "" }]);
-  const [dur, setDur] = useState("");
-  const [note, setNote] = useState("");
+  const draft = tr.draft || {};
+  // Angefangene, noch nicht gespeicherte Session wird in tr.draft gesichert, damit sie beim
+  // Tab-Wechsel nicht verloren geht (Session mounted/unmounted mit jedem Tab-Wechsel neu).
+  const [cat, setCat] = useState(draft.catId && cats.some((c) => c.id === draft.catId) ? draft.catId : (cats[0] ? cats[0].id : ""));
+  const [date, setDate] = useState(draft.date || todayKey());
+  const [rows, setRows] = useState(draft.rows && draft.rows.length ? draft.rows : [{ name: "", reps: "" }]);
+  const [dur, setDur] = useState(draft.dur || "");
+  const [note, setNote] = useState(draft.note || "");
   const [mOff, setMOff] = useState(0);
   const [editC, setEditC] = useState(false);
   const [newC, setNewC] = useState("");
   const [exSel, setExSel] = useState("");
-  const [tpl, setTpl] = useState(null);
-  const [tplRows, setTplRows] = useState([]);
-  const [freeOpen, setFreeOpen] = useState(false);
+  const [tplId, setTplId] = useState(draft.tplId || null);
+  const [tplRows, setTplRows] = useState(draft.tplRows || []);
+  const [freeOpen, setFreeOpen] = useState(!!draft.freeOpen);
+  const tpl = tplId ? tpls.find((t) => t.id === tplId) || null : null;
+  const setTpl = (t) => setTplId(t ? t.id : null);
+
+  useEffect(() => {
+    up((d) => {
+      d.training.draft = { catId: cat, date, rows, dur, note, tplId, tplRows, freeOpen };
+      return d;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat, date, rows, dur, note, tplId, tplRows, freeOpen]);
 
   const sessions = [...(tr.sessions || [])].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   const counts = cats.map((c, i) => ({ ...c, n: sessions.filter((s) => s.catId === c.id).length, col: catColor(c.id, i) }));
@@ -963,6 +983,7 @@ function Training({ data, up }) {
     up((d) => {
       d.training.sessions.push({ id: Date.now(), date, catId: cid, items, duration: Number(dur) || null, note: note.trim() });
       syncRecords(d, items);
+      d.training.draft = null;
       return d;
     });
     setRows([{ name: "", reps: "" }]); setDur(""); setNote(""); setFreeOpen(false);
@@ -973,17 +994,21 @@ function Training({ data, up }) {
     if (!tpl) return;
     const items = tplRows.filter((r) => r.name.trim() && (parseReps(r.reps).length || Number(String(r.kg).replace(",", ".")))).map((r) => ({ name: r.name.trim(), reps: parseReps(r.reps), kg: Number(String(r.kg).replace(",", ".")) || null }));
     if (!items.length) return;
-    up((d) => { d.training.sessions.push({ id: Date.now(), date, catId: tpl.catId, items, duration: null, note: tpl.name }); syncRecords(d, items); return d; });
+    up((d) => { d.training.sessions.push({ id: Date.now(), date, catId: tpl.catId, items, duration: null, note: tpl.name }); syncRecords(d, items); d.training.draft = null; return d; });
     setTpl(null);
   };
 
+  const weightEntries = (data.fitness.weight && data.fitness.weight.entries) || [];
+  const bodyweight = weightEntries.length ? [...weightEntries].sort((a, b) => a.date.localeCompare(b.date)).slice(-1)[0].value : 75;
+  // Kraft-Score statt roher Wiederholungen: mehr Zusatzgewicht bei weniger Wdh. zeigt trotzdem Fortschritt (Epley-artige Schätzung)
+  const kraftScore = (it) => (bodyweight + (it.kg || 0)) * (1 + Math.max(...it.reps) / 30);
   const exNames = [...new Set(sessions.flatMap((s) => (s.items || []).filter((i) => i.reps && i.reps.length).map((i) => i.name)))];
   const selEx = exNames.includes(exSel) ? exSel : exNames[0] || "";
   const prog = selEx ? sessions
     .filter((s) => (s.items || []).some((i) => i.name === selEx && i.reps && i.reps.length))
-    .map((s) => ({ d: s.date, v: Math.max(...s.items.filter((i) => i.name === selEx && i.reps && i.reps.length).flatMap((i) => i.reps)) }))
+    .map((s) => ({ d: s.date, v: Math.max(...s.items.filter((i) => i.name === selEx && i.reps && i.reps.length).map(kraftScore)) }))
     .sort((a, b) => a.d.localeCompare(b.d))
-    .map((p) => ({ name: `${p.d.slice(8, 10)}.${p.d.slice(5, 7)}.`, Wdh: p.v })) : [];
+    .map((p) => ({ name: `${p.d.slice(8, 10)}.${p.d.slice(5, 7)}.`, Kraft: Math.round(p.v) })) : [];
 
   return (
     <>
@@ -1084,7 +1109,7 @@ function Training({ data, up }) {
                 </div>
               ))}
               <div style={{ display: "flex", gap: 8 }}>
-                <button style={{ ...btn(), flex: 1 }} onClick={() => setTpl(null)}>Abbrechen</button>
+                <button style={{ ...btn(), flex: 1 }} onClick={() => { setTpl(null); setTplRows([]); }}>Abbrechen</button>
                 <button style={{ ...btn(true), flex: 2 }} onClick={saveTpl}>Session speichern</button>
               </div>
               <p style={{ fontSize: 11.5, color: C.faint, margin: 0 }}>Wdh. je Satz kommagetrennt eintragen (z.B. 8,6,5 bei 3 Sätzen mit sinkender Wiederholungszahl). kg optional (z.B. Kettlebell). Dein bester Satz zählt automatisch als Rekord bei Klimmzügen, Dips und Liegestützen.</p>
@@ -1128,12 +1153,13 @@ function Training({ data, up }) {
                   <XAxis dataKey="name" stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke={C.faint} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip contentStyle={tt} />
-                  <Line type="monotone" dataKey="Wdh" stroke={C.green} strokeWidth={2.5} dot={{ r: 3, fill: C.green }} />
+                  <Line type="monotone" dataKey="Kraft" stroke={C.green} strokeWidth={2.5} dot={{ r: 3, fill: C.green }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <p style={{ fontSize: 12, color: C.faint, margin: "0 8px 6px" }}>Ab der zweiten Session mit dieser Übung wächst hier die Kurve.</p>
             )}
+            {prog.length > 1 && <p style={{ fontSize: 11, color: C.faint, margin: "6px 8px 0" }}>Kraft-Score verrechnet Körpergewicht, Zusatzgewicht und Wiederholungen – mehr Gewicht bei weniger Wdh. zeigt trotzdem Fortschritt.</p>}
           </div>
         </>
       )}
