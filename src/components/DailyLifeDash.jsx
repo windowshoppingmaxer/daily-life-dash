@@ -334,6 +334,20 @@ export default function Dashboard({ user, onSignOut, onReady }) {
     t.current = setTimeout(() => saveNow(data), 600);
     return () => clearTimeout(t.current);
   }, [data]);
+  // Der 600ms-Debounce kann eine Änderung verlieren, wenn die Seite/App genau in dem Fenster
+  // weggeklickt, der Tab gewechselt oder das Handy gesperrt wird (v.a. als Homescreen-PWA) --
+  // deshalb bei "wird gerade versteckt/verlassen" sofort speichern statt auf den Timer zu warten.
+  useEffect(() => {
+    if (!loaded.current || !data) return;
+    const flush = () => { clearTimeout(t.current); saveNow(data); };
+    const onVisibility = () => { if (document.visibilityState === "hidden") flush(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [data]);
   const up = (fn) => setData((d) => fn(structuredClone(d)));
   const doImport = (p) => { setBlocked(false); blockRef.current = false; setErr(null); setData(mergeData(p)); };
 
@@ -996,7 +1010,7 @@ function Training({ data, up }) {
     const items = tplRows.filter((r) => r.name.trim() && (parseReps(r.reps).length || Number(String(r.kg).replace(",", ".")))).map((r) => ({ name: r.name.trim(), reps: parseReps(r.reps), kg: Number(String(r.kg).replace(",", ".")) || null }));
     if (!items.length) return;
     up((d) => { d.training.sessions.push({ id: Date.now(), date, catId: tpl.catId, items, duration: null, note: tpl.name }); syncRecords(d, items); d.training.draft = null; return d; });
-    setTpl(null);
+    setTpl(null); setTplRows([]);
   };
 
   const weightEntries = (data.fitness.weight && data.fitness.weight.entries) || [];
