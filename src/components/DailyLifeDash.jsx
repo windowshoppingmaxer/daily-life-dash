@@ -986,7 +986,10 @@ function Training({ data, up }) {
   // Angefangene, noch nicht gespeicherte Session wird in tr.draft gesichert, damit sie beim
   // Tab-Wechsel nicht verloren geht (Session mounted/unmounted mit jedem Tab-Wechsel neu).
   const [cat, setCat] = useState(draft.catId && cats.some((c) => c.id === draft.catId) ? draft.catId : (cats[0] ? cats[0].id : ""));
-  const [date, setDate] = useState(draft.date || todayKey());
+  // Datum bewusst NICHT aus dem Entwurf übernehmen, sondern immer frisch auf heute setzen --
+  // sonst blieb nach dem ersten Öffnen ein einmal gespeichertes altes Datum für immer stehen,
+  // und Sessions wurden lautlos unter dem falschen Tag abgespeichert.
+  const [date, setDate] = useState(todayKey());
   const [rows, setRows] = useState(draft.rows && draft.rows.length ? draft.rows : [{ name: "", reps: "" }]);
   const [dur, setDur] = useState(draft.dur || "");
   const [note, setNote] = useState(draft.note || "");
