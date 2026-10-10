@@ -71,6 +71,7 @@ const seed = {
     { id: 3, title: "Erster Muscle Up", target: "", done: false },
   ] },
   income: { target: 10000, entries: [] },
+  weekly: { workoutsTarget: 3, greenDaysTarget: 5, habitsTarget: 5 },
   food: {
     target: { kcal: 2200, protein: 145, fat: 65, carbs: 255 },
     categories: [
@@ -160,6 +161,7 @@ function mergeData(p) {
       items: ((p.achievements && p.achievements.items) || seed.achievements.items).filter((x) => x.title !== "10k investiert"),
     },
     income: { ...seed.income, ...p.income },
+    weekly: { ...seed.weekly, ...p.weekly },
     food: {
       ...seed.food, ...(p.food || {}),
       target: { ...seed.food.target, ...((p.food && p.food.target) || {}) },
@@ -202,6 +204,21 @@ function mergeAppendLogs(local, remote) {
     }
   }
   return merged;
+}
+
+// ---------- Essen-Tagesbewertung (auch fürs Weekly Dashboard gebraucht) ----------
+function foodDayRating(fd, dateKey) {
+  const dayEntries = fd.entries.filter((e) => e.date === dateKey);
+  if (!dayEntries.length) return null;
+  const kcal = dayEntries.reduce((a, e) => a + (Number(e.kcal) || 0), 0);
+  const protein = dayEntries.reduce((a, e) => a + (Number(e.protein) || 0), 0);
+  const dayBurned = fd.burns.filter((b) => b.date === dateKey).reduce((a, b) => a + (Number(b.kcal) || 0), 0);
+  const dayTarget = fd.target.kcal + dayBurned;
+  const pPct = fd.target.protein ? protein / fd.target.protein : 0;
+  const kPct = dayTarget ? kcal / dayTarget : 0;
+  if (pPct < 0.7 || kPct > 1.4) return "red";
+  if (pPct < 0.9 || kPct > 1.2) return "orange";
+  return "green";
 }
 
 // ---------- Streaks ----------
@@ -454,6 +471,37 @@ function Home({ data, up, open }) {
     return d;
   });
 
+  // Wochenziele: Montag dieser Woche bis heute
+  const weekStart = mondayOfWeek();
+  const weekDates = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return keyOf(d); });
+  const todayIdx = Math.min(6, Math.floor((new Date() - weekStart) / 86400000));
+  const weekDatesSoFar = weekDates.slice(0, todayIdx + 1);
+  const workoutsThisWeek = (data.training.sessions || []).filter((s) => weekDates.includes(s.date)).length;
+  const greenFoodDays = weekDatesSoFar.filter((k) => foodDayRating(data.food, k) === "green").length;
+  const habitTotal = data.habits.list.length;
+  const greenHabitDays = habitTotal ? weekDatesSoFar.filter((k) => {
+    const checks = data.habits.checks[k] || {};
+    const done = Object.values(checks).filter(Boolean).length;
+    return done / habitTotal >= 0.8;
+  }).length : 0;
+  const wk = data.weekly || { workoutsTarget: 3, greenDaysTarget: 5, habitsTarget: 5 };
+  const weeklyGoalsHit = (workoutsThisWeek >= wk.workoutsTarget ? 1 : 0) + (greenFoodDays >= wk.greenDaysTarget ? 1 : 0) + (greenHabitDays >= wk.habitsTarget ? 1 : 0);
+  const setWeeklyTarget = (key, v) => up((d) => { d.weekly = d.weekly || {}; d.weekly[key] = Math.max(1, Number(v) || 1); return d; });
+
+  const WeekGoalRow = ({ icon, label, value, target, onTarget }) => (
+    <div style={{ padding: "9px 2px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 13.5, fontWeight: 700 }}>{icon} {label}</span>
+        <span style={{ fontSize: 12.5, color: C.sub, display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ ...num, color: value >= target ? C.green : C.text, fontWeight: 800 }}>{value}</span>
+          <span>/</span>
+          <input type="number" min={1} value={target} onChange={(e) => onTarget(e.target.value)} style={{ ...input, width: 38, padding: "3px 4px", fontSize: 12.5, textAlign: "center" }} />
+        </span>
+      </div>
+      <Bar pct={(value / Math.max(1, target)) * 100} />
+    </div>
+  );
+
   const Tile = ({ id, icon, title, sub, children }) => (
     <div onClick={() => open(id)} style={card({ padding: 14, cursor: "pointer" })}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -490,6 +538,17 @@ function Home({ data, up, open }) {
         </div>
       </div>
       <p style={{ fontSize: 11.5, color: C.faint, margin: "10px 4px 20px" }}>Mit "›" auch für kommende Tage vorplanen — abends schon eintragen, was morgen ansteht.</p>
+
+      <Sec>Wochenziele</Sec>
+      <div style={hiCard({ padding: 14, marginBottom: 20 })}>
+        <div style={{ textAlign: "center", marginBottom: 8, paddingBottom: 10, borderBottom: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: C.green, ...glow, ...num }}>{weeklyGoalsHit} / 3</span>
+          <div style={{ fontSize: 11.5, color: C.sub }}>Wochenziele erreicht</div>
+        </div>
+        <WeekGoalRow icon="🏋️" label="Workouts" value={workoutsThisWeek} target={wk.workoutsTarget} onTarget={(v) => setWeeklyTarget("workoutsTarget", v)} />
+        <WeekGoalRow icon="🥗" label="Grüne Tage (Essen)" value={greenFoodDays} target={wk.greenDaysTarget} onTarget={(v) => setWeeklyTarget("greenDaysTarget", v)} />
+        <WeekGoalRow icon="✅" label="Grüne Tage (Habits)" value={greenHabitDays} target={wk.habitsTarget} onTarget={(v) => setWeeklyTarget("habitsTarget", v)} />
+      </div>
 
       {/* Geld with forecast */}
       <div onClick={() => open("geld")} style={hiCard({ padding: 15, cursor: "pointer", marginBottom: 10 })}>
@@ -1366,19 +1425,7 @@ function Food({ data, up }) {
   };
   const removeBurn = (id) => up((d) => { d.food.burns = d.food.burns.filter((b) => b.id !== id); return d; });
 
-  const dayRating = (dateKey) => {
-    const dayEntries = fd.entries.filter((e) => e.date === dateKey);
-    if (!dayEntries.length) return null;
-    const kcal = dayEntries.reduce((a, e) => a + (Number(e.kcal) || 0), 0);
-    const protein = dayEntries.reduce((a, e) => a + (Number(e.protein) || 0), 0);
-    const dayBurned = fd.burns.filter((b) => b.date === dateKey).reduce((a, b) => a + (Number(b.kcal) || 0), 0);
-    const dayTarget = fd.target.kcal + dayBurned;
-    const pPct = fd.target.protein ? protein / fd.target.protein : 0;
-    const kPct = dayTarget ? kcal / dayTarget : 0;
-    if (pPct < 0.7 || kPct > 1.4) return "red";
-    if (pPct < 0.9 || kPct > 1.2) return "orange";
-    return "green";
-  };
+  const dayRating = (dateKey) => foodDayRating(fd, dateKey);
 
   const MacroBar = ({ label, val, target, color }) => (
     <div style={card({ padding: 12 })}>
