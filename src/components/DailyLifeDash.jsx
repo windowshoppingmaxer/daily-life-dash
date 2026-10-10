@@ -179,6 +179,31 @@ function mergeData(p) {
   };
 }
 
+// Reine "Log"-Listen (nur anhängen, nie bearbeiten) -- bei diesen kann ein zweites Gerät/Tab mit
+// älterem Stand nie etwas Neueres kaputtmachen, weil beim Speichern beide Versionen per id
+// vereinigt werden, statt die ganze Zeile einfach zu überschreiben.
+const APPEND_LOG_PATHS = [
+  ["training", "sessions"],
+  ["food", "entries"],
+  ["food", "burns"],
+  ["finance", "entries"],
+];
+function mergeAppendLogs(local, remote) {
+  let merged = local;
+  for (const [a, b] of APPEND_LOG_PATHS) {
+    const localArr = (local[a] && local[a][b]) || [];
+    const remoteArr = (remote[a] && remote[a][b]) || [];
+    if (!remoteArr.length) continue;
+    const localIds = new Set(localArr.map((x) => x.id));
+    const onlyRemote = remoteArr.filter((x) => !localIds.has(x.id));
+    if (onlyRemote.length) {
+      if (merged === local) merged = structuredClone(local);
+      merged[a][b] = [...localArr, ...onlyRemote];
+    }
+  }
+  return merged;
+}
+
 // ---------- Streaks ----------
 function habitStreak(data, id) {
   let s = 0; const d = new Date();
@@ -317,15 +342,30 @@ export default function Dashboard({ user, onSignOut, onReady }) {
 
   const saveNow = async (d, attempt = 1) => {
     if (blockRef.current) return;
-    const { error } = await supabase.from("dashboards").upsert({ user_id: user.id, data: d });
+    let toSave = d;
+    if (attempt === 1) {
+      // Vor jedem Schreiben kurz nachsehen, ob der Server inzwischen Einträge hat, die hier
+      // (noch) nicht bekannt sind -- z.B. von einem zweiten offenen Tab oder Gerät. Da hier
+      // immer die GANZE Zeile überschrieben wird, würde das sonst z.B. eine auf dem Handy
+      // gespeicherte Trainings-Session stillschweigend wieder löschen, wenn parallel ein altes,
+      // noch offenes Laptop-Tab seinerseits speichert.
+      try {
+        const { data: row } = await supabase.from("dashboards").select("data").eq("user_id", user.id).maybeSingle();
+        if (row && row.data) {
+          const merged = mergeAppendLogs(d, row.data);
+          if (merged !== d) { toSave = merged; setData(merged); }
+        }
+      } catch (e) { /* Merge-Check fehlgeschlagen -- normal weiterspeichern, besser als gar nicht */ }
+    }
+    const { error } = await supabase.from("dashboards").upsert({ user_id: user.id, data: toSave });
     if (!error) {
-      writeCache(user.id, d);
+      writeCache(user.id, toSave);
       setErr(null);
       return;
     }
-    if (attempt < 3) { setTimeout(() => saveNow(d, attempt + 1), 1200 * attempt); return; }
+    if (attempt < 3) { setTimeout(() => saveNow(toSave, attempt + 1), 1200 * attempt); return; }
     // Netz weg oder Fehler: lokal cachen, damit nichts verloren geht, und beim nächsten Mal erneut versuchen
-    writeCache(user.id, d);
+    writeCache(user.id, toSave);
     setErr("Speichern gerade nicht möglich (offline?) – dein Stand ist lokal gesichert und wird synchronisiert, sobald wieder Netz da ist.");
   };
   useEffect(() => {
