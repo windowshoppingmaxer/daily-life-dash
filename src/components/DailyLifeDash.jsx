@@ -138,6 +138,26 @@ const seed = {
       { id: "pm11_d500", catId: "dinner", name: "Gebratener Reis in Erdnusssauce (500g)", kcal: 585, protein: 43, fat: 21, carbs: 55 },
       { id: "pm11_d1000", catId: "dinner", name: "Gebratener Reis in Erdnusssauce (1kg)", kcal: 1170, protein: 85, fat: 42, carbs: 109 },
 
+      { id: "pm12_l1", catId: "lunch", name: "Red Thai Curry (1 Portion)", kcal: 555, protein: 43, fat: 21, carbs: 47 },
+      { id: "pm12_lxl", catId: "lunch", name: "Red Thai Curry (XL, 2 Portionen)", kcal: 1110, protein: 86, fat: 41, carbs: 94 },
+      { id: "pm12_d1", catId: "dinner", name: "Red Thai Curry (1 Portion)", kcal: 555, protein: 43, fat: 21, carbs: 47 },
+      { id: "pm12_dxl", catId: "dinner", name: "Red Thai Curry (XL, 2 Portionen)", kcal: 1110, protein: 86, fat: 41, carbs: 94 },
+
+      { id: "pm13_l1", catId: "lunch", name: "Nudeln Asiatische Art (1 Portion)", kcal: 510, protein: 48, fat: 12, carbs: 48 },
+      { id: "pm13_lxl", catId: "lunch", name: "Nudeln Asiatische Art (XL, 2 Portionen)", kcal: 1020, protein: 96, fat: 23, carbs: 96 },
+      { id: "pm13_d1", catId: "dinner", name: "Nudeln Asiatische Art (1 Portion)", kcal: 510, protein: 48, fat: 12, carbs: 48 },
+      { id: "pm13_dxl", catId: "dinner", name: "Nudeln Asiatische Art (XL, 2 Portionen)", kcal: 1020, protein: 96, fat: 23, carbs: 96 },
+
+      { id: "pm14_l1", catId: "lunch", name: "Butter Chicken (1 Portion)", kcal: 625, protein: 45, fat: 19, carbs: 66 },
+      { id: "pm14_lxl", catId: "lunch", name: "Butter Chicken (XL, 2 Portionen)", kcal: 1250, protein: 90, fat: 38, carbs: 132 },
+      { id: "pm14_d1", catId: "dinner", name: "Butter Chicken (1 Portion)", kcal: 625, protein: 45, fat: 19, carbs: 66 },
+      { id: "pm14_dxl", catId: "dinner", name: "Butter Chicken (XL, 2 Portionen)", kcal: 1250, protein: 90, fat: 38, carbs: 132 },
+
+      { id: "pm15_l1", catId: "lunch", name: "Hähnchen-Bowl Thai-Art (1 Portion)", kcal: 330, protein: 50, fat: 7, carbs: 13 },
+      { id: "pm15_lxl", catId: "lunch", name: "Hähnchen-Bowl Thai-Art (XL, 2 Portionen)", kcal: 660, protein: 100, fat: 13, carbs: 25 },
+      { id: "pm15_d1", catId: "dinner", name: "Hähnchen-Bowl Thai-Art (1 Portion)", kcal: 330, protein: 50, fat: 7, carbs: 13 },
+      { id: "pm15_dxl", catId: "dinner", name: "Hähnchen-Bowl Thai-Art (XL, 2 Portionen)", kcal: 660, protein: 100, fat: 13, carbs: 25 },
+
       { id: "bf1_330", catId: "breakfast", name: "Protein Drink (330ml)", kcal: 221, protein: 35, fat: 1, carbs: 17 },
     ],
     entries: [],
@@ -1360,6 +1380,8 @@ function Food({ data, up }) {
   const [openCat, setOpenCat] = useState(null);
   const [sel, setSel] = useState({});
   const [selSize, setSelSize] = useState({});
+  const [qty, setQty] = useState({});
+  const [editEntry, setEditEntry] = useState(null);
   const [showCustom, setShowCustom] = useState({});
   const [custom, setCustom] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
   const [editT, setEditT] = useState(false);
@@ -1378,7 +1400,16 @@ function Food({ data, up }) {
   const effectiveTarget = fd.target.kcal + burned;
   const remaining = Math.max(0, effectiveTarget - eaten.kcal);
 
-  const logMeal = (m, catId) => { up((d) => { d.food.entries.push({ id: Date.now(), date: viewKey, catId, mealId: m.id, name: m.name, kcal: m.kcal, protein: m.protein, fat: m.fat, carbs: m.carbs }); return d; }); };
+  const logMeal = (m, catId, q = 1) => {
+    up((d) => {
+      d.food.entries.push({
+        id: Date.now(), date: viewKey, catId, mealId: m.id,
+        name: q > 1 ? `${m.name} ×${q}` : m.name,
+        kcal: m.kcal * q, protein: m.protein * q, fat: m.fat * q, carbs: m.carbs * q,
+      });
+      return d;
+    });
+  };
   const logCustom = (catId) => {
     const kcal = Number(custom.kcal) || 0, protein = Number(custom.protein) || 0, fat = Number(custom.fat) || 0, carbs = Number(custom.carbs) || 0;
     if (!custom.name.trim() && !kcal) return;
@@ -1387,6 +1418,20 @@ function Food({ data, up }) {
     setOpenCat(null);
   };
   const removeEntry = (id) => up((d) => { d.food.entries = d.food.entries.filter((e) => e.id !== id); return d; });
+  const startEditEntry = (e) => setEditEntry({ id: e.id, kcal: e.kcal, protein: e.protein, fat: e.fat, carbs: e.carbs });
+  const saveEditEntry = () => {
+    up((d) => {
+      const entry = d.food.entries.find((x) => x.id === editEntry.id);
+      if (entry) {
+        entry.kcal = Number(editEntry.kcal) || 0;
+        entry.protein = Number(editEntry.protein) || 0;
+        entry.fat = Number(editEntry.fat) || 0;
+        entry.carbs = Number(editEntry.carbs) || 0;
+      }
+      return d;
+    });
+    setEditEntry(null);
+  };
   const saveTarget = () => { up((d) => { d.food.target = { kcal: Number(tgt.kcal) || 0, protein: Number(tgt.protein) || 0, fat: Number(tgt.fat) || 0, carbs: Number(tgt.carbs) || 0 }; return d; }); setEditT(false); };
   const addMeal = () => {
     if (!newMeal.name.trim() || !libCat) return;
@@ -1585,12 +1630,26 @@ function Food({ data, up }) {
                 {catEntries.length > 0 && (
                   <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
                     {catEntries.map((e) => (
-                      <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px" }}>
-                        <span>{e.name}</span>
-                        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <span style={{ color: C.text, fontWeight: 700, ...num }}>{Math.round(e.kcal)} kcal</span>
-                          <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={() => removeEntry(e.id)}>✕</button>
-                        </span>
+                      <div key={e.id}>
+                        <div
+                          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: C.sub, padding: "4px 2px", cursor: "pointer" }}
+                          onClick={() => (editEntry && editEntry.id === e.id ? setEditEntry(null) : startEditEntry(e))}
+                        >
+                          <span>{e.name}</span>
+                          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <span style={{ color: C.text, fontWeight: 700, ...num }}>{Math.round(e.kcal)} kcal</span>
+                            <button style={{ border: "none", background: "transparent", color: C.faint, cursor: "pointer" }} onClick={(ev) => { ev.stopPropagation(); removeEntry(e.id); }}>✕</button>
+                          </span>
+                        </div>
+                        {editEntry && editEntry.id === e.id && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, margin: "4px 2px 8px" }}>
+                            <input style={{ ...input, padding: "7px 7px", fontSize: 12.5 }} type="number" placeholder="kcal" value={editEntry.kcal} onChange={(ev) => setEditEntry({ ...editEntry, kcal: ev.target.value })} />
+                            <input style={{ ...input, padding: "7px 7px", fontSize: 12.5 }} type="number" placeholder="P" value={editEntry.protein} onChange={(ev) => setEditEntry({ ...editEntry, protein: ev.target.value })} />
+                            <input style={{ ...input, padding: "7px 7px", fontSize: 12.5 }} type="number" placeholder="F" value={editEntry.fat} onChange={(ev) => setEditEntry({ ...editEntry, fat: ev.target.value })} />
+                            <input style={{ ...input, padding: "7px 7px", fontSize: 12.5 }} type="number" placeholder="Kh" value={editEntry.carbs} onChange={(ev) => setEditEntry({ ...editEntry, carbs: ev.target.value })} />
+                            <button style={{ ...btn(true), gridColumn: "1 / -1", padding: "6px 0", fontSize: 12.5 }} onClick={saveEditEntry}>Speichern</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1600,25 +1659,32 @@ function Food({ data, up }) {
                   <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                     {catMeals.length > 0 && (
                       <div style={{ display: "grid", gap: 8 }}>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <select
-                            style={{ ...input, flex: 1, padding: "10px 12px" }}
-                            value={curBase || ""}
-                            onChange={(e) => setSel({ ...sel, [c.id]: e.target.value })}
-                          >
-                            {baseNames.map((b) => (
-                              <option key={b} value={b}>{b}</option>
-                            ))}
-                          </select>
-                          <button style={btn(true)} onClick={() => selMeal && logMeal(selMeal, c.id)}>+</button>
-                        </div>
+                        <select
+                          style={{ ...input, padding: "10px 12px" }}
+                          value={curBase || ""}
+                          onChange={(e) => setSel({ ...sel, [c.id]: e.target.value })}
+                        >
+                          {baseNames.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
                         {variants.length > 1 && (
                           <Seg options={variants.map((v) => v.size)} value={selMeal ? selMeal.size : variants[0].size} onChange={(sz) => { const v = variants.find((x) => x.size === sz); if (v) setSelSize({ ...selSize, [c.id]: v.id }); }} />
                         )}
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 999, padding: "4px 6px" }}>
+                            <button style={{ border: "none", background: "transparent", color: C.text, cursor: "pointer", fontSize: 16, fontWeight: 700, width: 24, height: 24 }} onClick={() => setQty({ ...qty, [c.id]: Math.max(1, (qty[c.id] || 1) - 1) })}>–</button>
+                            <span style={{ ...num, minWidth: 16, textAlign: "center", fontWeight: 700, fontSize: 13.5 }}>{qty[c.id] || 1}</span>
+                            <button style={{ border: "none", background: "transparent", color: C.text, cursor: "pointer", fontSize: 16, fontWeight: 700, width: 24, height: 24 }} onClick={() => setQty({ ...qty, [c.id]: (qty[c.id] || 1) + 1 })}>+</button>
+                          </div>
+                          <button style={{ ...btn(true), flex: 1 }} onClick={() => { if (selMeal) { logMeal(selMeal, c.id, qty[c.id] || 1); setQty({ ...qty, [c.id]: 1 }); } }}>Hinzufügen</button>
+                        </div>
                       </div>
                     )}
                     {selMeal && (
-                      <div style={{ fontSize: 11.5, color: C.faint, padding: "0 2px" }}>{selMeal.kcal} kcal · P {selMeal.protein}g · F {selMeal.fat}g · Kh {selMeal.carbs}g</div>
+                      <div style={{ fontSize: 11.5, color: C.faint, padding: "0 2px" }}>
+                        {Math.round(selMeal.kcal * (qty[c.id] || 1))} kcal · P {Math.round(selMeal.protein * (qty[c.id] || 1))}g · F {Math.round(selMeal.fat * (qty[c.id] || 1))}g · Kh {Math.round(selMeal.carbs * (qty[c.id] || 1))}g{(qty[c.id] || 1) > 1 ? ` (×${qty[c.id]})` : ""}
+                      </div>
                     )}
                     <button
                       style={{ border: "none", background: "transparent", color: C.sub, cursor: "pointer", fontSize: 12, padding: "6px 0", textAlign: "left" }}
