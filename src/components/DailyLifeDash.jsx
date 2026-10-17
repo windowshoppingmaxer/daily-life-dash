@@ -36,7 +36,7 @@ const seed = {
   finance: { goal: 20000, entries: [], netWorthHistory: [] },
   sales: { cert: false, courseName: "Sales-Kurs abschließen", oppTarget: 3, oppCount: 0, quota: false, opsMonth: false },
   fitness: { strands: [
-    { id: "pull", name: "Klimmzüge", milestones: [5, 10, 20], current: 0 },
+    { id: "pull", name: "Klimmzüge", milestones: [5, 10, 15, 20], current: 0 },
     { id: "dip", name: "Dips", milestones: [5, 10, 15], current: 0 },
     { id: "push", name: "Liegestütze", milestones: [10, 20, 30, 40, 50], current: 0 },
   ], muscleUp: false, weight: { entries: [] } },
@@ -171,7 +171,15 @@ function mergeData(p) {
     ...seed, ...p,
     finance: { ...seed.finance, ...p.finance, netWorthHistory: p.finance?.netWorthHistory || [] },
     sales: { ...seed.sales, ...p.sales },
-    fitness: { ...seed.fitness, ...p.fitness, weight: (p.fitness && p.fitness.weight) || { entries: [] } },
+    fitness: {
+      ...seed.fitness, ...p.fitness,
+      // Milestones/Name je Strand immer aus dem aktuellen Seed (damit z.B. ein neues Badge wie "15"
+      // auch bei bestehenden Nutzern auftaucht), nur der eigene Fortschritt (current) bleibt erhalten.
+      strands: (p.fitness && p.fitness.strands && p.fitness.strands.length)
+        ? seed.fitness.strands.map((s) => { const ex = p.fitness.strands.find((x) => x.id === s.id); return ex ? { ...s, current: ex.current } : s; })
+        : seed.fitness.strands,
+      weight: (p.fitness && p.fitness.weight) || { entries: [] },
+    },
     training: { ...seed.training, ...(p.training || {}), categories: (p.training && p.training.categories) || seed.training.categories, templates: (p.training && p.training.templates) || seed.training.templates, sessions: (p.training && p.training.sessions) || [] },
     chess: { ...seed.chess, ...p.chess },
     habits: { ...seed.habits, ...p.habits },
