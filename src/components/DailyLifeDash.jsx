@@ -218,14 +218,17 @@ const APPEND_LOG_PATHS = [
   ["food", "burns"],
   ["finance", "entries"],
 ];
-function mergeAppendLogs(local, remote) {
+// cutoff = Zeitpunkt (id = Date.now()), ab dem ein fehlender lokaler Eintrag als "von einem anderen
+// Gerät neu dazugekommen" gilt statt als "hier bewusst gelöscht". Ohne das würde jedes Löschen vom
+// nächsten Speichervorgang rückgängig gemacht, weil der Eintrag ja noch auf dem Server steht.
+function mergeAppendLogs(local, remote, cutoff) {
   let merged = local;
   for (const [a, b] of APPEND_LOG_PATHS) {
     const localArr = (local[a] && local[a][b]) || [];
     const remoteArr = (remote[a] && remote[a][b]) || [];
     if (!remoteArr.length) continue;
     const localIds = new Set(localArr.map((x) => x.id));
-    const onlyRemote = remoteArr.filter((x) => !localIds.has(x.id));
+    const onlyRemote = remoteArr.filter((x) => !localIds.has(x.id) && x.id > cutoff);
     if (onlyRemote.length) {
       if (merged === local) merged = structuredClone(local);
       merged[a][b] = [...localArr, ...onlyRemote];
@@ -347,7 +350,8 @@ export default function Dashboard({ user, onSignOut, onReady }) {
   const [err, setErr] = useState(null);
   const [blocked, setBlocked] = useState(false);
   const t = useRef(null); const loaded = useRef(false); const blockRef = useRef(false);
-  const finishLoad = () => { loaded.current = true; onReady && onReady(); };
+  const loadedAt = useRef(0);
+  const finishLoad = () => { loaded.current = true; loadedAt.current = Date.now(); onReady && onReady(); };
 
   useEffect(() => { (async () => {
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -397,7 +401,7 @@ export default function Dashboard({ user, onSignOut, onReady }) {
       try {
         const { data: row } = await supabase.from("dashboards").select("data").eq("user_id", user.id).maybeSingle();
         if (row && row.data) {
-          const merged = mergeAppendLogs(d, row.data);
+          const merged = mergeAppendLogs(d, row.data, loadedAt.current);
           if (merged !== d) { toSave = merged; setData(merged); }
         }
       } catch (e) { /* Merge-Check fehlgeschlagen -- normal weiterspeichern, besser als gar nicht */ }
@@ -669,7 +673,18 @@ function Geld({ data, up, back, doImport, onSignOut, userEmail }) {
   const currentNW = latestNetWorth(data);
   const nwHistory = [...(data.finance.netWorthHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
   const saveNW = () => { if (!Number(nw)) return; up((d) => { d.finance.netWorthHistory = d.finance.netWorthHistory || []; d.finance.netWorthHistory.push({ date: todayKey(), value: Number(nw) }); return d; }); setNw(""); };
-  const add = () => { if (!Number(f.amount)) return; up((d) => { d.finance.entries.push({ id: Date.now(), month: f.month, amount: Number(f.amount), note: f.note }); return d; }); setF({ ...f, amount: "", note: "" }); };
+  // Höchstens ein Eintrag pro Monat -- ein erneutes Eintragen für denselben Monat aktualisiert den
+  // bestehenden Betrag, statt einen zweiten Eintrag anzulegen.
+  const add = () => {
+    if (!Number(f.amount)) return;
+    up((d) => {
+      const existing = d.finance.entries.find((e) => e.month === f.month);
+      if (existing) { existing.amount = Number(f.amount); existing.note = f.note; }
+      else d.finance.entries.push({ id: Date.now(), month: f.month, amount: Number(f.amount), note: f.note });
+      return d;
+    });
+    setF({ ...f, amount: "", note: "" });
+  };
   const sorted = [...data.finance.entries].sort((a, b) => b.month.localeCompare(a.month) || b.id - a.id);
 
   const nwForGoal = currentNW || 0;
